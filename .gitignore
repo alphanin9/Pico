@@ -1,0 +1,5 @@
+.vscode/
+.xmake/
+build/
+vsxmake2022/
+CMakeLists.txt
