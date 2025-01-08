@@ -76,7 +76,7 @@ struct IntegrityChecker : shared::Util::NonCopyableOrMovable
      * \param aIsClient Is the module our client?
      * \return Whether or not the module was tampered with.
      */
-    pico::Bool ScanModule(const pico::Engine::ModuleData& aModule, pico::shared::PE::Image* aImage, pico::Bool aIsClient) const noexcept;
+    pico::Bool ScanModule(pico::Engine::ModuleData& aModule, pico::shared::PE::Image* aImage, pico::Bool aIsClient) const noexcept;
 
     /**
      * \brief Scans the client module for integrity.

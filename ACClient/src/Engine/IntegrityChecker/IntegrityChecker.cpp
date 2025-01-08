@@ -45,8 +45,7 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) n
     m_sizeOfHeaders = rawImage->get_nt_headers()->optional_header.size_headers;
 
     // Copy PE headers in
-    std::copy_n(rawPeData.begin(), m_sizeOfHeaders,
-                m_modulePeFileData.begin());
+    std::copy_n(rawPeData.begin(), m_sizeOfHeaders, m_modulePeFileData.begin());
 
     // Copy sections
     for (const auto& section : rawImage->get_nt_headers()->sections())
@@ -86,7 +85,7 @@ pico::Bool pico::Engine::ModuleData::RelocateImage(void* aBaseAddress) noexcept
     return true;
 }
 
-pico::Bool pico::Engine::IntegrityChecker::ScanModule(const pico::Engine::ModuleData& aModule,
+pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& aModule,
                                                       pico::shared::PE::Image* aImage,
                                                       pico::Bool aIsClientModule) const noexcept
 {
@@ -117,6 +116,9 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(const pico::Engine::Module
 
     auto peHeadersEqual = true;
 
+    const auto backupImageBase = aModule.m_image->get_nt_headers()->optional_header.image_base;
+    aModule.m_image->get_nt_headers()->optional_header.image_base = reinterpret_cast<pico::Uint64>(aImage);
+
     for (auto i = 0u; i < aModule.m_sizeOfHeaders; i++)
     {
         auto diskByte = *aModule.m_image->raw_to_ptr<pico::Uint8>(i);
@@ -124,15 +126,17 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(const pico::Engine::Module
 
         if (diskByte != memByte)
         {
-            s_logger->error("[Headers] Bytes at RVA {:#x} ({} {}) differ! {:x} != {:x}", i,
+            logger->error("[Headers] Bytes at RVA {:#x} ({} {}) differ! {:x} != {:x}", i,
                             aModule.m_image->raw_to_ptr<void>(i), aImage->raw_to_ptr<void>(i), diskByte, memByte);
             peHeadersEqual = false;
         }
     }
 
+    aModule.m_image->get_nt_headers()->optional_header.image_base = backupImageBase;
+
     if (!peHeadersEqual)
     {
-        s_logger->warn("PE headers differ between disk and image!");
+        logger->warn("PE headers differ between disk and image!");
     }
 
     auto success = true;
@@ -174,10 +178,18 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(const pico::Engine::Module
     }
 
     // (Sorta) find vfunc pointer swaps by checking relocations
-    // Note: for whatever reason, this points to lots of other things around WinAPI too - could they be doing VFT swaps 
+    // Note: for whatever reason, this points to lots of other things around WinAPI too - could they be doing VFT swaps
     // or is this an imports thing I haven't gotten the hang of yet?
-    for (auto reloc : aModule.m_relocations)
+    for (pico::Uint32 reloc : aModule.m_relocations)
     {
+        auto relocSection = aModule.m_image->rva_to_section(reloc);
+
+        // Skip relocs in writable sections
+        if (!relocSection || relocSection->characteristics.mem_write == 1)
+        {
+            continue;
+        }
+
         // Get the pointer
         auto diskRelocPtr = *aModule.m_image->raw_to_ptr<void*>(reloc);
 
@@ -199,7 +211,8 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(const pico::Engine::Module
             continue;
         }
 
-        auto memoryRelocPtr = *aImage->raw_to_ptr<void*>(reloc);
+        auto memoryReloc = aImage->raw_to_ptr<void*>(reloc);
+        auto memoryRelocPtr = *memoryReloc;
 
         void* pe{};
 
@@ -221,7 +234,8 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(const pico::Engine::Module
                 continue;
             }
 
-            logger->info("Relocation {} points outside of an image! This is unlikely to be right.", memoryRelocPtr);
+            logger->info("Relocation {} (source {}, RVA {}) points outside of an image! This is unlikely to be right.",
+                         memoryRelocPtr, reinterpret_cast<void*>(memoryReloc), reloc);
             continue;
         }
 
@@ -230,8 +244,8 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(const pico::Engine::Module
             pico::UnicodeString imageName{};
             wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(pe), imageName);
 
-            logger->info("Relocation {} points to module {} instead of correct module!", memoryRelocPtr,
-                         shared::Util::ToUTF8(imageName));
+            logger->info("Relocation {} (source {}, RVA {}) points to module {} instead of correct module!",
+                         memoryRelocPtr, reinterpret_cast<void*>(memoryReloc), reloc, shared::Util::ToUTF8(imageName));
         }
     }
 
