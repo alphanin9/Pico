@@ -21,6 +21,9 @@ struct ModuleData
     // The relocation delta we apply on our image
     uintptr_t m_relocationDelta{};
 
+    // The size of the image's headers
+    pico::Uint32 m_sizeOfHeaders{};
+
     // RVAs of image relocations, used for integrity checking
     pico::Vector<pico::Uint32> m_relocations{};
 
@@ -31,7 +34,7 @@ struct ModuleData
      * \param aBaseAddress The base address of the loaded module.
      * \return Whether or not loading failed.
      */
-    pico::Bool Load(pico::UnicodeStringView aPath, void* aBaseAddress) noexcept;
+    pico::Bool Load(pico::UnicodeStringView aPath) noexcept;
 
     /**
      * \brief Applies relocations to the module data based on image relocation information.

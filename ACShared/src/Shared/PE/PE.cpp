@@ -204,17 +204,17 @@ pico::Vector<pico::Uint32> pico::shared::PE::GetRelocations(_In_ const pico::sha
         return {};
     }
 
-    auto relocationsDirectory = aImage->raw_to_ptr<win::reloc_directory_t>(relocationsDirRva.rva);
+    const auto relocationsDirectory = aImage->raw_to_ptr<win::reloc_directory_t>(relocationsDirRva.rva);
 
     pico::Vector<pico::Uint32> relocs{};
 
-    for (auto* relocBlock = &relocationsDirectory->first_block; relocBlock->base_rva; relocBlock = relocBlock->next())
+    for (const auto* relocBlock = &relocationsDirectory->first_block; relocBlock->base_rva; relocBlock = relocBlock->next())
     {
-        for (auto relocEntry : *relocBlock)
+        for (const auto relocEntry : *relocBlock)
         {
-            auto totalRva = relocBlock->base_rva + relocEntry.offset;
-
-            if (relocEntry.type == win::rel_based_high_low || relocEntry.type == win::rel_based_dir64)
+            const auto totalRva = relocBlock->base_rva + relocEntry.offset;
+            // Note: for our usecase, we only care about IMAGE_REL_BASED_DIR64 - while some other things will use different relocation types, we don't really care
+            if (relocEntry.type == win::rel_based_dir64)
             {
                 relocs.push_back(totalRva);
             }

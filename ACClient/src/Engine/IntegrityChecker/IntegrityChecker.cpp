@@ -2,7 +2,7 @@
 #include <Engine/IntegrityChecker/IntegrityChecker.hpp>
 #include <Engine/Logging/Logger.hpp>
 
-pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath, void* aBaseAddress) noexcept
+pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) noexcept
 {
     pico::Path filePath = aModulePath;
 
@@ -42,8 +42,10 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath, v
     // Reset module data, fill with 0s
     m_modulePeFileData.assign(rawImage->get_nt_headers()->optional_header.size_image, {});
 
+    m_sizeOfHeaders = rawImage->get_nt_headers()->optional_header.size_headers;
+
     // Copy PE headers in
-    std::copy_n(rawPeData.begin(), rawImage->get_nt_headers()->optional_header.size_headers,
+    std::copy_n(rawPeData.begin(), m_sizeOfHeaders,
                 m_modulePeFileData.begin());
 
     // Copy sections
@@ -60,14 +62,7 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath, v
         return false;
     }
 
-    if (!RelocateImage(aBaseAddress))
-    {
-        return false;
-    }
-
-    // Note: we should also be resolving proper IAT (unless we just ignore IAT checking in integrity),
-    // dedicated IAT hook check comes later
-    return true;
+    return RelocateImage(m_image);
 }
 
 pico::Bool pico::Engine::ModuleData::RelocateImage(void* aBaseAddress) noexcept
@@ -95,24 +90,25 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(const pico::Engine::Module
                                                       pico::shared::PE::Image* aImage,
                                                       pico::Bool aIsClientModule) const noexcept
 {
-    auto& s_logger = Logger::GetLogSink();
+    static auto& s_engine = Engine::Get();
+    auto& logger = Logger::GetLogSink();
 
     // We do not need to do the same check for on-disk image, ModuleData::Load() already does it
     if (!aImage)
     {
-        s_logger->error("Module in memory did not have valid PE!");
+        logger->error("Module in memory did not have valid PE!");
         return false;
     }
 
     // We should dump such images
     if (pico::shared::PE::HasLargeRWXSections(aModule.m_image))
     {
-        s_logger->warn("Image has large RWX sections! This is potentially a sign of cheating.");
+        logger->warn("Image has large RWX sections! This is potentially a sign of cheating.");
     }
 
     if (pico::shared::PE::IsIntegrityCheckableImageSizeSmall(aModule.m_image))
     {
-        s_logger->warn("Image has not much read-only to check!");
+        logger->warn("Image has not much read-only to check!");
     }
 
     // Check PE structure
@@ -121,7 +117,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(const pico::Engine::Module
 
     auto peHeadersEqual = true;
 
-    for (auto i = 0u; i < aModule.m_image->get_nt_headers()->optional_header.size_headers; i++)
+    for (auto i = 0u; i < aModule.m_sizeOfHeaders; i++)
     {
         auto diskByte = *aModule.m_image->raw_to_ptr<pico::Uint8>(i);
         auto memByte = *aImage->raw_to_ptr<pico::Uint8>(i);
@@ -144,7 +140,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(const pico::Engine::Module
 
     if (functionEntries.empty())
     {
-        s_logger->error("Binary has no exception information!");
+        logger->error("Binary has no exception information!");
         return false;
     }
 
@@ -169,8 +165,8 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(const pico::Engine::Module
                 }
 
                 // TODO: if it's a jump, follow jump chain
-                s_logger->error("Bytes at RVA {:#x} ({} {}) differ! {:x} != {:x}", i,
-                                aModule.m_image->raw_to_ptr<void>(i), aImage->raw_to_ptr<void>(i), diskByte, memByte);
+                logger->error("Bytes at RVA {:#x} ({} {}) differ! {:x} != {:x}", i,
+                              aModule.m_image->raw_to_ptr<void>(i), aImage->raw_to_ptr<void>(i), diskByte, memByte);
 
                 success = false;
             }
@@ -178,6 +174,8 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(const pico::Engine::Module
     }
 
     // (Sorta) find vfunc pointer swaps by checking relocations
+    // Note: for whatever reason, this points to lots of other things around WinAPI too - could they be doing VFT swaps 
+    // or is this an imports thing I haven't gotten the hang of yet?
     for (auto reloc : aModule.m_relocations)
     {
         // Get the pointer
@@ -202,28 +200,38 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(const pico::Engine::Module
         }
 
         auto memoryRelocPtr = *aImage->raw_to_ptr<void*>(reloc);
-        auto memoryRelocatedRva = aImage->ptr_to_raw(memoryRelocPtr);
 
-        if (diskRelocatedRva != memoryRelocatedRva)
+        void* pe{};
+
+        RtlPcToFileHeader(memoryRelocPtr, &pe);
+
+        // Reloc is supposed to point in ourselves, but it points god-knows-where?
+        if (!pe)
         {
-            s_logger->error("RVA difference found at reloc {:#x}, addr {}!", reloc, memoryRelocPtr);
+            MEMORY_BASIC_INFORMATION mbi{};
 
-            MEMORY_BASIC_INFORMATION memInfo{};
-
-            if (!VirtualQuery(memoryRelocPtr, &memInfo, 8))
-            {
-                s_logger->warn("VirtualQuery at addy {} failed!", memoryRelocPtr);
-                continue;
-            }
-
-            if (!shared::MemoryEnv::IsProtectionExecutable(memInfo.Protect) &&
-                !shared::MemoryEnv::IsProtectionExecutable(memInfo.AllocationProtect))
+            if (!VirtualQuery(memoryRelocPtr, &mbi, sizeof(mbi)))
             {
                 continue;
             }
 
-            s_logger->warn("Found potential VMT hook at {}, should be: {}", memoryRelocPtr, aImage->raw_to_ptr<void>(diskRelocatedRva));
-            success = false;
+            if (!shared::MemoryEnv::IsProtectionExecutable(mbi.Protect) &&
+                !shared::MemoryEnv::IsProtectionExecutable(mbi.AllocationProtect))
+            {
+                continue;
+            }
+
+            logger->info("Relocation {} points outside of an image! This is unlikely to be right.", memoryRelocPtr);
+            continue;
+        }
+
+        if (pe != aImage)
+        {
+            pico::UnicodeString imageName{};
+            wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(pe), imageName);
+
+            logger->info("Relocation {} points to module {} instead of correct module!", memoryRelocPtr,
+                         shared::Util::ToUTF8(imageName));
         }
     }
 
@@ -250,7 +258,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanClient() noexcept
 
     if (timestamp - s_clientData.m_lastIntegrityCheckTime > ClientLibraryRefreshInterval)
     {
-        if (s_clientData.Load(modulePath, s_engine.m_moduleBase))
+        if (s_clientData.Load(modulePath))
         {
             s_clientData.m_lastIntegrityCheckTime = timestamp;
         }
@@ -291,8 +299,9 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
 
     auto moduleScanned = false;
 
-    for (auto entry : loadedModules)
+    for (auto i = 0u; i < loadedModules.size(); i++)
     {
+        auto entry = loadedModules[i];
         if (shouldReport)
         {
             s_logger->info("Module {} loaded, base address {}", shared::Util::ToUTF8(entry->FullDllName.Buffer),
@@ -328,14 +337,15 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
             continue;
         }
 
-        if (!moduleEntry.Load(entry->FullDllName.Buffer, entry->DllBase))
+        if (!moduleEntry.Load(entry->FullDllName.Buffer))
         {
             s_logger->error("Failed to load module entry for {}, base address {}!",
                             shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
             continue;
         }
 
-        moduleEntry.m_lastIntegrityCheckTime = timestamp;
+        // We should not have too many consecutive integrity checks
+        moduleEntry.m_lastIntegrityCheckTime = timestamp + std::chrono::seconds(i);
 
         s_logger->info("Scanning module {} at base {}", shared::Util::ToUTF8(entry->BaseDllName.Buffer),
                        entry->DllBase);
