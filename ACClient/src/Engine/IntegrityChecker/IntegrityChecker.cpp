@@ -111,8 +111,8 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
     }
 
     // Check PE structure
-    // I don't think this should differ too much at disk and runtime normally
-    // On CS2 it does on some modules
+    // I don't think this should differ too much at disk and runtime, assuming you fix everything up correctly
+    // Note: something else besides image base also needs fixing, unsure what
 
     auto peHeadersEqual = true;
 
@@ -148,6 +148,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
         return false;
     }
 
+    // This is not perfectly optional
     for (auto [startRva, endRva] : functionEntries)
     {
         for (auto i = startRva; i != endRva; i++)

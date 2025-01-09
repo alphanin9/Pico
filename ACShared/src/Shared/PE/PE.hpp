@@ -91,11 +91,14 @@ pico::Bool HasLargeRWXSections(_In_ const pico::shared::PE::Image* const aImage)
 pico::String GetImagePDBPath(_In_ const pico::shared::PE::Image* const aImage) noexcept;
 
 /**
- * \brief Enumerates an image's relocations and returns them.
+ * \brief Enumerates an image's relocations of type IMAGE_REL_BASED_DIR64 and returns their RVAs.
+ * 
+ * Other relocations are not enumerated due to difficulties in handling, but are used on Windows.
+ * A more proper implementation would replicate the behavior of ntdll!LdrProcessRelocationBlockLongLong.
  * 
  * \param aImage A pointer to an image structure the data is queried from.
  * 
- * \return A vector containing every RVA of a relocation in the image. If the function fails, returns an empty vector.
+ * \return A vector containing every RVA of an IMAGE_REL_BASED_DIR64 typed relocation in the image. If the function fails, returns an empty vector.
  */
 pico::Vector<pico::Uint32> GetRelocations(_In_ const pico::shared::PE::Image* const aImage) noexcept;
 } // namespace pico::shared::PE
