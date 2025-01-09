@@ -1,18 +1,44 @@
 #include <Shared/PE/PE.hpp>
+#include <Shared/ProcessEnv/ProcessEnv.hpp>
 
 pico::shared::PE::Image* pico::shared::PE::GetImagePtr(_In_ void* const aPtrInImage) noexcept
 {
-    pico::shared::PE::Image* peFileHeader = nullptr;
-
-    RtlPcToFileHeader(aPtrInImage, reinterpret_cast<PVOID*>(&peFileHeader));
-
-    // We don't know about it being a proper image?
-    if (!peFileHeader)
+    if (!aPtrInImage)
     {
-        peFileHeader = reinterpret_cast<pico::shared::PE::Image*>(aPtrInImage);
+        return nullptr;
     }
 
-    if (pico::shared::PE::IsImageValid(peFileHeader))
+    pico::shared::PE::Image* peFileHeader{};
+
+    ProcessEnv::EnumerateLoadedModules(
+        [&peFileHeader, aPtrInImage](Windows::LDR_DATA_TABLE_ENTRY* aEntry)
+        {
+            const auto asUintptr = reinterpret_cast<uintptr_t>(aPtrInImage);
+            const auto dllBase = reinterpret_cast<uintptr_t>(aEntry->DllBase);
+
+            const auto entryPe = reinterpret_cast<pico::shared::PE::Image*>(aEntry->DllBase);
+
+            // We can skip the validity check, as invalid PE would never be loaded as a DLL
+            const auto imageSize = entryPe->get_nt_headers()->optional_header.size_image;
+
+            if (asUintptr >= dllBase && asUintptr <= dllBase + imageSize)
+            {
+                peFileHeader = entryPe;
+                return true;
+            }
+
+            return false;
+        });
+
+    if (peFileHeader)
+    {
+        return peFileHeader;
+    }
+
+    // We don't know about it being a proper image? Maybe it's manual mapped or somesuch
+    peFileHeader = reinterpret_cast<pico::shared::PE::Image*>(aPtrInImage);
+    
+    if (IsImageValid(peFileHeader))
     {
         return peFileHeader;
     }
@@ -22,6 +48,11 @@ pico::shared::PE::Image* pico::shared::PE::GetImagePtr(_In_ void* const aPtrInIm
 
 pico::Bool pico::shared::PE::IsImageValid(_In_ const pico::shared::PE::Image* const aImage) noexcept
 {
+    if (!aImage)
+    {
+        return false;
+    }
+
     const auto dosHeaders = aImage->get_dos_headers();
 
     // Is the DOS header valid?
@@ -39,7 +70,7 @@ pico::Bool pico::shared::PE::IsImageValid(_In_ const pico::shared::PE::Image* co
 std::pair<uintptr_t, uintptr_t> pico::shared::PE::GetImageBounds(
     _In_ const pico::shared::PE::Image* const aImage) noexcept
 {
-    if (!pico::shared::PE::IsImageValid(aImage))
+    if (!IsImageValid(aImage))
     {
         return {};
     }
@@ -55,7 +86,7 @@ std::pair<uintptr_t, uintptr_t> pico::shared::PE::GetImageBounds(
 pico::Vector<std::pair<uintptr_t, uintptr_t>> pico::shared::PE::GetFunctionsOfImage(
     _In_ const pico::shared::PE::Image* const aImage) noexcept
 {
-    if (!pico::shared::PE::IsImageValid(aImage))
+    if (!IsImageValid(aImage))
     {
         return {};
     }
@@ -88,7 +119,7 @@ pico::Vector<std::pair<uintptr_t, uintptr_t>> pico::shared::PE::GetFunctionsOfIm
 std::pair<uintptr_t, uintptr_t> pico::shared::PE::GetFunctionBounds(_In_ const pico::shared::PE::Image* const aImage,
                                                                     _In_ const void* const aAddrInFunc) noexcept
 {
-    if (!pico::shared::PE::IsImageValid(aImage))
+    if (!IsImageValid(aImage))
     {
         return {};
     }
@@ -104,7 +135,7 @@ std::pair<uintptr_t, uintptr_t> pico::shared::PE::GetFunctionBounds(_In_ const p
     const auto directorySize = exceptionDir->size;
 
     const win::exception_directory exceptionDirectory{aImage->raw_to_ptr<void>(directoryRVA), directorySize};
-    
+
     const auto imageBaseAsUint = reinterpret_cast<uintptr_t>(aImage);
 
     const auto funcRVA = aImage->ptr_to_raw(aAddrInFunc);
@@ -121,7 +152,7 @@ std::pair<uintptr_t, uintptr_t> pico::shared::PE::GetFunctionBounds(_In_ const p
 pico::Bool pico::shared::PE::IsIntegrityCheckableImageSizeSmall(
     _In_ const pico::shared::PE::Image* const aImage) noexcept
 {
-    if (!pico::shared::PE::IsImageValid(aImage))
+    if (!IsImageValid(aImage))
     {
         return false;
     }
@@ -149,7 +180,7 @@ pico::Bool pico::shared::PE::IsIntegrityCheckableImageSizeSmall(
 
 pico::Bool pico::shared::PE::HasLargeRWXSections(_In_ const pico::shared::PE::Image* const aImage) noexcept
 {
-    if (!pico::shared::PE::IsImageValid(aImage))
+    if (!IsImageValid(aImage))
     {
         return false;
     }
@@ -172,13 +203,13 @@ pico::Bool pico::shared::PE::HasLargeRWXSections(_In_ const pico::shared::PE::Im
     }
 
     constexpr pico::Size MaxSizeOfRWXSection = 0x4000;
-    
+
     return totalRwxSectionSize >= MaxSizeOfRWXSection;
 }
 
 pico::String pico::shared::PE::GetImagePDBPath(_In_ const pico::shared::PE::Image* const aImage) noexcept
 {
-    if (!pico::shared::PE::IsImageValid(aImage))
+    if (!IsImageValid(aImage))
     {
         return {};
     }
@@ -190,7 +221,7 @@ pico::String pico::shared::PE::GetImagePDBPath(_In_ const pico::shared::PE::Imag
 
 pico::Vector<pico::Uint32> pico::shared::PE::GetRelocations(_In_ const pico::shared::PE::Image* const aImage) noexcept
 {
-    if (!pico::shared::PE::IsImageValid(aImage))
+    if (!IsImageValid(aImage))
     {
         return {};
     }
@@ -208,12 +239,14 @@ pico::Vector<pico::Uint32> pico::shared::PE::GetRelocations(_In_ const pico::sha
 
     pico::Vector<pico::Uint32> relocs{};
 
-    for (const auto* relocBlock = &relocationsDirectory->first_block; relocBlock->base_rva; relocBlock = relocBlock->next())
+    for (const auto* relocBlock = &relocationsDirectory->first_block; relocBlock->base_rva;
+         relocBlock = relocBlock->next())
     {
         for (const auto relocEntry : *relocBlock)
         {
             const auto totalRva = relocBlock->base_rva + relocEntry.offset;
-            // Note: for our usecase, we only care about IMAGE_REL_BASED_DIR64 - while some other things will use different relocation types, we don't really care
+            // Note: for our usecase, we only care about IMAGE_REL_BASED_DIR64 - while some other things will use
+            // different relocation types, we don't really care
             if (relocEntry.type == win::rel_based_dir64)
             {
                 relocs.push_back(totalRva);
