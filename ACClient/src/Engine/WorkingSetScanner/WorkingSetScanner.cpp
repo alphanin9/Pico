@@ -1,3 +1,4 @@
+#include <Engine/Engine.hpp>
 #include <Engine/Logging/Logger.hpp>
 #include <Engine/WorkingSetScanner/WorkingSetScanner.hpp>
 
@@ -8,27 +9,50 @@ void pico::Engine::WorkingSetScanner::Tick() noexcept
     // So, make it 0x10001u?
     constexpr auto MaxExecutableAllocationSize = 0x10001u;
 
+    // Time between working set updates, as querying the working set every frame is expensive
+    constexpr std::chrono::seconds WorkingSetUpdateTime{5};
+
+    static auto& s_engine = Engine::Get();
     auto& logger = Logger::GetLogSink();
 
     // A potential optimization could be caching the addresses of the allocations we have already walked and skipping
-    // them in the WS.
+    // them in the WS. Keep in mind the main performance hog is the querying of the process working set, everything else takes very little time.
 
-    for (auto workingSetEntry : shared::MemoryEnv::GetProcessWorkingSet())
+    const auto timestamp = std::chrono::high_resolution_clock::now();
+
+    if (timestamp > m_nextWorkingSetCacheUpdate)
+    {
+        const auto start = std::chrono::high_resolution_clock::now();
+        // Increment bad thread counter
+        // Pray this doesn't race lol
+        s_engine.m_threadsUnderHeavyLoad++;
+        m_workingSetCache = shared::MemoryEnv::GetProcessWorkingSet();
+        // Can wait for completion now, the rest doesn't take much
+        s_engine.m_threadsUnderHeavyLoad--;
+        const auto taken =
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start)
+                .count();
+
+        logger->info("Time to capture working set: {}ms", taken);
+        m_nextWorkingSetCacheUpdate = timestamp + WorkingSetUpdateTime;
+    }
+
+    for (auto workingSetEntry : m_workingSetCache)
     {
         // Transform the VPN into an actual address
         const auto pageAddr = reinterpret_cast<void*>(workingSetEntry.VirtualPage * 0x1000);
 
-        // Skip non-executable pages
-        if ((workingSetEntry.Protection & (1 << 1)) == 0)
+        // Skip non-executable pages and pages that belong to a section
+        if ((workingSetEntry.Protection & (1 << 1)) == 0 || workingSetEntry.Shared == 1)
         {
             continue;
         }
 
         MEMORY_BASIC_INFORMATION pageInfo{};
 
+        // Might have deallocated or the like...
         if (!VirtualQuery(pageAddr, &pageInfo, sizeof(pageInfo)))
         {
-            logger->warn("Executable addr {} had VirtualQuery call fail!", pageAddr);
             continue;
         }
 
@@ -39,6 +63,7 @@ void pico::Engine::WorkingSetScanner::Tick() noexcept
                          pageAddr, pageInfo.Protect, pageInfo.AllocationProtect, pageInfo.Type, pageInfo.RegionSize);
         }
 
+        // MEM_IMAGE check might be useless here, not sure
         if (pageInfo.Type != MEM_IMAGE && pageInfo.RegionSize >= MaxExecutableAllocationSize)
         {
             logger->error("Executable addr {} is not image and is big! Protection: {:#x}, alloc protect: {:#x}, page "

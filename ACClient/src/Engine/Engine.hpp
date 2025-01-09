@@ -8,7 +8,13 @@ namespace pico::Engine
  */
 struct Engine : shared::Util::NonCopyableOrMovable
 {
-    std::atomic<pico::Bool> m_hasRunPreflight{};
+    // Counter to track how many threads in the thread pool are under heavy load that should not be waited for
+    // Should never go below 0
+    // Not sure about the design, makes it easy to break
+    std::atomic_int m_threadsUnderHeavyLoad{};
+
+    // Whether or not we've initialized
+    pico::Bool m_hasRunPreflight{};
 
     // Client module base
     void* m_moduleBase{};

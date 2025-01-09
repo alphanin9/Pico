@@ -17,15 +17,15 @@ struct ModuleData
 
     // Pointer to start of from-disk PE
     shared::PE::Image* m_image{};
-
-    // The relocation delta we apply on our image
-    uintptr_t m_relocationDelta{};
-
+    
     // The size of the image's headers
     pico::Uint32 m_sizeOfHeaders{};
 
     // RVAs of image relocations, used for integrity checking
     pico::Vector<pico::Uint32> m_relocations{};
+
+    // Image function entries from exception information
+    pico::Vector<std::pair<pico::Uint32, pico::Uint32>> m_functionEntries{};
 
     /**
      * \brief Instantiate a module data entry based on loaded module data.

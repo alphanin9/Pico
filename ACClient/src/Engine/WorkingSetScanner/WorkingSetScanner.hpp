@@ -19,6 +19,11 @@ namespace pico::Engine
  */
 struct WorkingSetScanner : shared::Util::NonCopyableOrMovable
 {
+    // A cache of the process working set.
+    // Although non-executable entries might update quite often, executable ones will update much rarer.
+    pico::Vector<Windows::MEMORY_WORKING_SET_BLOCK> m_workingSetCache{};
+    std::chrono::high_resolution_clock::time_point m_nextWorkingSetCacheUpdate{};
+
     /**
      * \brief Ticks component in the thread pool worker.
      */

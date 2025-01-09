@@ -83,7 +83,7 @@ std::pair<uintptr_t, uintptr_t> pico::shared::PE::GetImageBounds(
     return {asUintptr + optionalHeader.base_of_code, asUintptr + optionalHeader.size_image};
 }
 
-pico::Vector<std::pair<uintptr_t, uintptr_t>> pico::shared::PE::GetFunctionsOfImage(
+pico::Vector<std::pair<pico::Uint32, pico::Uint32>> pico::shared::PE::GetFunctionsOfImage(
     _In_ const pico::shared::PE::Image* const aImage) noexcept
 {
     if (!IsImageValid(aImage))
@@ -103,7 +103,7 @@ pico::Vector<std::pair<uintptr_t, uintptr_t>> pico::shared::PE::GetFunctionsOfIm
 
     const win::exception_directory exceptionDirectory{aImage->raw_to_ptr<void>(directoryRVA), directorySize};
 
-    pico::Vector<std::pair<uintptr_t, uintptr_t>> ret{};
+    pico::Vector<std::pair<pico::Uint32, pico::Uint32>> ret{};
 
     ret.reserve(exceptionDirectory.size());
 

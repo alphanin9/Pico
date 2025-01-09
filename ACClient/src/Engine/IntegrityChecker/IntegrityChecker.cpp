@@ -61,15 +61,16 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) n
         return false;
     }
 
+    m_functionEntries = shared::PE::GetFunctionsOfImage(m_image);    
+
     return RelocateImage(m_image);
 }
 
 pico::Bool pico::Engine::ModuleData::RelocateImage(void* aBaseAddress) noexcept
 {
-    m_relocationDelta =
-        reinterpret_cast<pico::Uint64>(aBaseAddress) - m_image->get_nt_headers()->optional_header.image_base;
+    const auto relocationDelta = reinterpret_cast<pico::Uint64>(aBaseAddress) - m_image->get_nt_headers()->optional_header.image_base;
 
-    if (m_relocationDelta == 0u)
+    if (relocationDelta == 0u)
     {
         // The image does not need relocations to be performed
         return true;
@@ -79,7 +80,7 @@ pico::Bool pico::Engine::ModuleData::RelocateImage(void* aBaseAddress) noexcept
 
     for (auto relocRva : m_relocations)
     {
-        *m_image->raw_to_ptr<pico::Uint64>(relocRva) += m_relocationDelta;
+        *m_image->raw_to_ptr<pico::Uint64>(relocRva) += relocationDelta;
     }
 
     return true;
@@ -140,16 +141,16 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
     }
 
     auto success = true;
-    auto functionEntries = shared::PE::GetFunctionsOfImage(aModule.m_image);
 
-    if (functionEntries.empty())
+    if (aModule.m_functionEntries.empty())
     {
-        logger->error("Binary has no exception information!");
+        // TODO: fallback to hashing RO sections
+        logger->error("Binary has no exception information! Should fall back here");
         return false;
     }
 
     // This is not perfectly optional
-    for (auto [startRva, endRva] : functionEntries)
+    for (auto [startRva, endRva] : aModule.m_functionEntries)
     {
         for (auto i = startRva; i != endRva; i++)
         {

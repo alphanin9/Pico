@@ -45,7 +45,7 @@ std::pair<uintptr_t, uintptr_t> GetImageBounds(_In_ const pico::shared::PE::Imag
  * 
  * \return A vector of pairs of [functionStartRva, functionEndRva] entries. Returns empty vector on failure.
  */
-pico::Vector<std::pair<uintptr_t, uintptr_t>> GetFunctionsOfImage(
+pico::Vector<std::pair<pico::Uint32, pico::Uint32>> GetFunctionsOfImage(
     _In_ const pico::shared::PE::Image* const aImage) noexcept;
 
 /**

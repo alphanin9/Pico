@@ -17,8 +17,7 @@ void pico::Engine::Engine::Tick() noexcept
         return;
     }
 
-    // Dispatch jobs here.
-
+    // Dispatch jobs here.    
     threadPool.Dispatch([]() { ContextScanner::Get().Tick(); });
     threadPool.Dispatch([]() { IntegrityChecker::Get().Tick(); });
     threadPool.Dispatch([]() { WorkingSetScanner::Get().Tick(); });
@@ -48,26 +47,51 @@ void pico::Engine::Engine::TickMainThreadJobs() noexcept
 
 pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept
 {
-    auto& threadPool = ThreadPool::Get();
-    auto& logger = Logger::Get().m_logger;
+    static auto& threadPool = ThreadPool::Get();
+    auto& logger = Logger::GetLogSink();
 
     // Dispatch job to all threads
     // NOTE: on second thoughts this is a bit silly,
     // but it should still catch suspended threads every now and then
-    std::atomic<pico::Int64> counter{};
-    for (auto i = 0u; i < threadPool.m_pool.get_thread_count(); i++)
+
+    if (m_threadsUnderHeavyLoad < 0)
     {
-        threadPool.Dispatch([&counter]() { counter++; }, BS::pr::highest);
+        logger->critical("Engine::m_threadsUnderHeavyLoad is negative, this should NEVER happen!");
     }
 
-    // Given this is called before threadPool.CanPushJobs(),
-    // this may also end up waiting on normal worker threads - good
-    threadPool.m_pool.wait();
-
-    if (threadPool.m_pool.get_thread_count() != counter)
+    // While this is not perfect at all, this check should help out with stutters a bit
+    if (m_threadsUnderHeavyLoad <= 0)
     {
-        logger->error("Not all threads responded to pool");
-        return false;
+        std::atomic<pico::Int64> counter{};
+        for (auto i = 0u; i < threadPool.m_pool.get_thread_count(); i++)
+        {
+            threadPool.Dispatch([&counter]() { counter++; }, BS::pr::highest);
+        }
+
+        // Given this is called before threadPool.CanPushJobs(),
+        // this may also end up waiting on normal worker threads - good
+        // Not actually very good, given we can have long-running jobs here!
+
+        const auto start = std::chrono::high_resolution_clock::now();
+
+        threadPool.m_pool.wait();
+
+        const auto duration =
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start)
+                .count();
+
+        logger->info("Time taken to wait: {}ms", duration);
+
+        if (duration > 20)
+        {
+            logger->error("Unacceptable stutter from pool wait! This is a PROBLEM.");
+        }
+
+        if (threadPool.m_pool.get_thread_count() != counter)
+        {
+            logger->error("Not all threads responded to pool");
+            return false;
+        }
     }
 
     for (HANDLE i : threadPool.m_pool.get_native_handles())
