@@ -3,8 +3,10 @@
 
 void pico::Engine::WorkingSetScanner::Tick() noexcept
 {
-    // Note: In CS2, this will also catch trampolines made by GameOverlayRenderer64.dll!!!
-    constexpr auto MaxExecutableAllocationSize = 0x4000u;
+    // Note: In CS2, 0x4000 will also catch trampolines made by GameOverlayRenderer64.dll
+    // The maximum trampoline allocation size by overlay renderer seems to be 0x10000u
+    // So, make it 0x10001u?
+    constexpr auto MaxExecutableAllocationSize = 0x10001u;
 
     auto& logger = Logger::GetLogSink();
 
