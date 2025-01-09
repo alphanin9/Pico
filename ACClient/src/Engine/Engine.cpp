@@ -3,6 +3,7 @@
 #include <Engine/IntegrityChecker/IntegrityChecker.hpp>
 #include <Engine/Logging/Logger.hpp>
 #include <Engine/ThreadPool/ThreadPool.hpp>
+#include <Engine/WorkingSetScanner/WorkingSetScanner.hpp>
 
 void pico::Engine::Engine::Tick() noexcept
 {
@@ -20,6 +21,7 @@ void pico::Engine::Engine::Tick() noexcept
 
     threadPool.Dispatch([]() { ContextScanner::Get().Tick(); });
     threadPool.Dispatch([]() { IntegrityChecker::Get().Tick(); });
+    threadPool.Dispatch([]() { WorkingSetScanner::Get().Tick(); });
 }
 
 void pico::Engine::Engine::TickMainThreadJobs() noexcept
@@ -108,7 +110,7 @@ void pico::Engine::Engine::Setup() noexcept
     const auto secureBootConfig = shared::EnvironmentIntegrity::GetSecureBootConfig();
 
     logger->info("Secure Boot config: can use: {}, is on: {}", secureBootConfig.m_secureBootSupported,
-                          secureBootConfig.m_secureBootEnabled);
+                 secureBootConfig.m_secureBootEnabled);
 
     if (!secureBootConfig.m_secureBootEnabled)
     {
@@ -120,8 +122,8 @@ void pico::Engine::Engine::Setup() noexcept
 
     const auto codeIntegrityConfig = shared::EnvironmentIntegrity::GetCodeIntegrityConfig();
     logger->info("CI config: enabled: {}, debug mode: {}, test signing: {}, HVCI: {}",
-                          codeIntegrityConfig.m_codeIntegrity, codeIntegrityConfig.m_debugMode,
-                          codeIntegrityConfig.m_testSigning, codeIntegrityConfig.m_hypervisorCodeIntegrity);
+                 codeIntegrityConfig.m_codeIntegrity, codeIntegrityConfig.m_debugMode,
+                 codeIntegrityConfig.m_testSigning, codeIntegrityConfig.m_hypervisorCodeIntegrity);
 
     logger->info("Raw CI: {0:#b}", codeIntegrityConfig.m_raw);
 
@@ -136,12 +138,12 @@ void pico::Engine::Engine::Setup() noexcept
         if (driver.m_fullPath.empty())
         {
             logger->warn("Note: Driver {} full path is empty and thus not integrity checkable",
-                                  shared::Util::ToUTF8(driver.m_rawPath));
+                         shared::Util::ToUTF8(driver.m_rawPath));
             continue;
         }
 
         if (!shared::EnvironmentIntegrity::VerifyFileTrust(driver.m_fullPath,
-                                                          shared::EnvironmentIntegrity::EFileType::Driver))
+                                                           shared::EnvironmentIntegrity::EFileType::Driver))
         {
             logger->error("Driver {} has a bad file signature!", shared::Util::ToUTF8(driver.m_rawPath));
         }
