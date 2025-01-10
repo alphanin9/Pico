@@ -4,11 +4,14 @@ It turns out I have terribly poor ideas for thesis projects.
 
 ### Features
 
-- Currently nothing much except for architecture and some shared stuff
 - Thread pool workers added in main thread, some things will run in main thread as well
 - Compatible with Counter-Strike 2 (should work both with Vulkan and DX11 render systems) and should be compatible (theoretically, as long as you update the function AOB signature or switch to a different address resolver method) with Rust
 - Currently bootstrapped by basic LoadLibrary injector along with a hook on the low latency sleep function of the respective games
-- Detection vectors currently include a basic (non-functional at the moment) integrity checker based on analyzing exception directory functions and relocation checks, along with grabbing thread contexts every now and then and analyzing their stacks for executable memory addresses
+- Detection vectors include 
+    - An integrity checker based on analyzing exception directory functions and relocation checks
+    - Integrity check will trace detour hooks to their destination using [Zydis](https://github.com/zyantific/zydis) as a disassembler, logging the destination memory location and module
+    - Grabbing thread contexts every now and then and analyzing their stacks for executable memory addresses
+    - (Untested) Process working set checks to catch manually mapped modules
 - System integrity verification includes checking for Secure Boot, proper code integrity settings and checking for known bad certificate drivers via `WinVerifyTrust`
 - Prioritization for ease of integration and development
 - Not particularly tailored to any game for the sake of easy integration
@@ -16,8 +19,7 @@ It turns out I have terribly poor ideas for thesis projects.
 
 ### Planned features - internal detection
 
-- Making the integrity check work (and follow absolute/relative jumps)
-- Process working set checks to find manually mapped modules
+- Making fallbacks for the integrity check in case of exception information missing
 - IAT hook detection
 - Exception, thread creation, DLL loading, APC and system call instrumentation
 - Detections via [process working set watch](https://github.com/winsiderss/systeminformer/blob/9757c17ce71a7bf9b0564d4502d270806f08e0c8/phnt/include/ntpsapi.h#L532) thread ID + RIP (unsure about feasibility, best case - might work on external hacks too?)
