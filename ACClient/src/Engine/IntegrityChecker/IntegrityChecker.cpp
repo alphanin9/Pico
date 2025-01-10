@@ -61,14 +61,15 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) n
         return false;
     }
 
-    m_functionEntries = shared::PE::GetFunctionsOfImage(m_image);    
+    m_functionEntries = shared::PE::GetFunctionsOfImage(m_image);
 
     return RelocateImage(m_image);
 }
 
 pico::Bool pico::Engine::ModuleData::RelocateImage(void* aBaseAddress) noexcept
 {
-    const auto relocationDelta = reinterpret_cast<pico::Uint64>(aBaseAddress) - m_image->get_nt_headers()->optional_header.image_base;
+    const auto relocationDelta =
+        reinterpret_cast<pico::Uint64>(aBaseAddress) - m_image->get_nt_headers()->optional_header.image_base;
 
     if (relocationDelta == 0u)
     {
@@ -128,7 +129,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
         if (diskByte != memByte)
         {
             logger->error("[Headers] Bytes at RVA {:#x} ({} {}) differ! {:x} != {:x}", i,
-                            aModule.m_image->raw_to_ptr<void>(i), aImage->raw_to_ptr<void>(i), diskByte, memByte);
+                          aModule.m_image->raw_to_ptr<void>(i), aImage->raw_to_ptr<void>(i), diskByte, memByte);
             peHeadersEqual = false;
         }
     }
@@ -144,15 +145,15 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
 
     if (aModule.m_functionEntries.empty())
     {
-        // TODO: fallback to hashing RO sections
+        // TODO: fallback to plain iterating RO sections
         logger->error("Binary has no exception information! Should fall back here");
         return false;
     }
 
-    // This is not perfectly optional
+    // This is not perfectly optimal
     for (auto [startRva, endRva] : aModule.m_functionEntries)
     {
-        for (auto i = startRva; i != endRva; i++)
+        for (pico::Size i = startRva; i <= endRva; i++)
         {
             auto diskByte = *aModule.m_image->raw_to_ptr<pico::Uint8>(i);
             auto memByte = *aImage->raw_to_ptr<pico::Uint8>(i);
@@ -168,6 +169,47 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
                     // Note: child process debugger plugin will break on CreateProcess stuff
                     // I break on lots of things myself
                     continue;
+                }
+
+                pico::Size instrSize{};
+
+                uintptr_t addyToDetourTarget{};
+
+                const auto status = shared::Disassembler::FollowJumpChain(
+                    reinterpret_cast<uintptr_t>(aImage->raw_to_ptr<pico::Uint8>(i)), addyToDetourTarget, instrSize);
+
+                if (status == shared::Disassembler::EJumpFollowState::Success && addyToDetourTarget)
+                {
+                    if (s_engine.IsAddressInUs(addyToDetourTarget))
+                    {
+                        logger->info("Found our detour at {}!", reinterpret_cast<void*>(addyToDetourTarget));
+                    }
+
+                    const auto pe = shared::PE::GetImagePtr(reinterpret_cast<void*>(addyToDetourTarget));
+
+                    if (!pe)
+                    {
+                        logger->error("Found detour pointing to address {}! No backing image.",
+                                      reinterpret_cast<void*>(addyToDetourTarget));
+                    }
+                    else
+                    {
+                        pico::UnicodeString imageName{};
+                        wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(pe), imageName);
+
+                        logger->warn("Found detour at module {}, addr {}, RVA {:#x}", shared::Util::ToUTF8(imageName),
+                                     reinterpret_cast<void*>(addyToDetourTarget),
+                                     addyToDetourTarget - reinterpret_cast<uintptr_t>(pe));
+                    }
+
+                    i += instrSize;
+                    continue;
+                }
+
+                if (status != shared::Disassembler::EJumpFollowState::DisassemblyFailure)
+                {
+                    // Skip over a bunch of bytes we disassembled
+                    i += instrSize;
                 }
 
                 // TODO: if it's a jump, follow jump chain
@@ -216,9 +258,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
         auto memoryReloc = aImage->raw_to_ptr<void*>(reloc);
         auto memoryRelocPtr = *memoryReloc;
 
-        void* pe{};
-
-        RtlPcToFileHeader(memoryRelocPtr, &pe);
+        auto pe = shared::PE::GetImagePtr(memoryRelocPtr);
 
         // Reloc is supposed to point in ourselves, but it points god-knows-where?
         if (!pe)

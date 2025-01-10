@@ -209,12 +209,6 @@ void pico::Engine::Engine::SetupModuleData() noexcept
     m_maximumUMAddress = basicInfo.MaximumUserModeAddress;
 }
 
-pico::Bool pico::Engine::Engine::IsAddressInUs(uintptr_t aAddy) const noexcept
-{
-    return aAddy >= reinterpret_cast<uintptr_t>(m_moduleBase) &&
-           aAddy <= reinterpret_cast<uintptr_t>(m_moduleBase) + m_moduleSize;
-}
-
 pico::Engine::Engine& pico::Engine::Engine::Get() noexcept
 {
     static Engine s_instance{};

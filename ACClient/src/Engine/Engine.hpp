@@ -80,7 +80,11 @@ struct Engine : shared::Util::NonCopyableOrMovable
      * \param aAddy The checked address.
      * \return True if the address is within our module.
      */
-    __forceinline pico::Bool IsAddressInUs(uintptr_t aAddy) const noexcept;
+    __forceinline pico::Bool IsAddressInUs(uintptr_t aAddy) const noexcept
+    {
+        return aAddy >= reinterpret_cast<uintptr_t>(m_moduleBase) &&
+               aAddy <= reinterpret_cast<uintptr_t>(m_moduleBase) + m_moduleSize;
+    }
 
     /**
      * \brief Get a singleton instance of the engine.

@@ -9,7 +9,7 @@ set_strip("all")
 set_optimize("fastest")
 
 -- Shared requirements
-add_requires("hopscotch-map", "simdutf", "tiltedcore", "wil")
+add_requires("bddisasm", "hopscotch-map", "simdutf", "tiltedcore", "wil", "zydis")
 
 add_defines("NOMINMAX", "WIN32_LEAN_AND_MEAN")
 
