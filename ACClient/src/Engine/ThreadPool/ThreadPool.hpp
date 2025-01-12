@@ -15,7 +15,7 @@ namespace pico::Engine
  * 
  * This should be fixed in a production environment.
  */
-struct ThreadPool : shared::Util::NonCopyableOrMovable
+struct ThreadPool : public shared::Util::NonCopyableOrMovable
 {
     // This is a fairly arbitrary value, but I believe that 8 threads should be okay enough
     inline static constexpr auto MaxThreadCount = 8u;

@@ -17,7 +17,7 @@ namespace pico::Engine
  *
  * Note that this may fail if the image has a kernel mode driver attempting to hide it with VAD manipulation/whatnot.
  */
-struct WorkingSetScanner : shared::Util::NonCopyableOrMovable
+struct WorkingSetScanner : public shared::Util::NonCopyableOrMovable
 {
     // A cache of the process working set.
     // Although non-executable entries might update quite often, executable ones will update much rarer.

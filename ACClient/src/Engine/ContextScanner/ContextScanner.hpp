@@ -40,7 +40,7 @@ struct ContextFrame
  * 
  * Note: this can also scan stacks obtained from other sources
  */
-struct ContextScanner : shared::Util::NonCopyableOrMovable
+struct ContextScanner : public shared::Util::NonCopyableOrMovable
 {
     std::mutex m_contextScannerMutex{};
 

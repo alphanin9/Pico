@@ -12,7 +12,7 @@ namespace pico::Engine
  * information should be sent to the backend server. Contains functionality to log data to
  * OutputDebugString + log file sinks, as well as dump files to the disk.
  */
-struct Logger : shared::Util::NonCopyableOrMovable
+struct Logger : public shared::Util::NonCopyableOrMovable
 {
     std::shared_ptr<spdlog::logger> m_logger{};
     std::shared_ptr<spdlog::sinks::msvc_sink_mt> m_debugStringSink{};

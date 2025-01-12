@@ -61,7 +61,7 @@ struct ModuleData
  * 
  * Our own module is checked more thoroughly, with no patches being allowed at all.
  */
-struct IntegrityChecker : shared::Util::NonCopyableOrMovable
+struct IntegrityChecker : public shared::Util::NonCopyableOrMovable
 {
     std::chrono::high_resolution_clock::time_point m_lastTimeLoadedDllsReported{};
 

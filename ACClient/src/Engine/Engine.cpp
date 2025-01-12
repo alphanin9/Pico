@@ -5,6 +5,9 @@
 #include <Engine/ThreadPool/ThreadPool.hpp>
 #include <Engine/WorkingSetScanner/WorkingSetScanner.hpp>
 
+#include <DevIntegration/Integration.hpp>
+
+#include <Engine/Specific/CS2/CS2.hpp>
 void pico::Engine::Engine::Tick() noexcept
 {
     TickMainThreadJobs();
@@ -17,10 +20,17 @@ void pico::Engine::Engine::Tick() noexcept
         return;
     }
 
-    // Dispatch jobs here.    
+    // Dispatch jobs here.
     threadPool.Dispatch([]() { ContextScanner::Get().Tick(); });
     threadPool.Dispatch([]() { IntegrityChecker::Get().Tick(); });
     threadPool.Dispatch([]() { WorkingSetScanner::Get().Tick(); });
+
+    static const auto s_isCS2 = Integration::IsCS2();
+
+    if (s_isCS2)
+    {
+        threadPool.Dispatch([]() { Specific::CS2::Get().Tick(); });
+    }
 }
 
 void pico::Engine::Engine::TickMainThreadJobs() noexcept
