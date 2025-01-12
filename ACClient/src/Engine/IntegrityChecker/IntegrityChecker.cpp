@@ -4,12 +4,28 @@
 
 pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) noexcept
 {
+    m_path = aModulePath;
+    m_sha256 = shared::Files::GetFileSHA256(aModulePath);
+
+    if (m_sha256.empty())
+    {
+        // This shouldn't happen...
+        return false;
+    }
+
+    m_isTrusted = shared::EnvironmentIntegrity::VerifyFileTrust(aModulePath);
+
     pico::Path filePath = aModulePath;
 
     std::error_code ec{};
 
     // This shouldn't happen
     if (!std::filesystem::exists(filePath, ec))
+    {
+        return false;
+    }
+
+    if (ec)
     {
         return false;
     }
@@ -24,6 +40,7 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) n
     }
 
     // Note: Use two vectors instead, one for the raw file content, one for the actual PE file
+    // Note: we read it two times due to SHA256 calc, should probably fix it
     pico::Vector<pico::Uint8> rawPeData(fileSize, {});
 
     std::ifstream file(filePath, std::ios::binary);
@@ -87,6 +104,25 @@ pico::Bool pico::Engine::ModuleData::RelocateImage(void* aBaseAddress) noexcept
     return true;
 }
 
+void pico::Engine::ModuleData::DumpModuleInfo() noexcept
+{
+    auto& logger = Logger::GetLogSink();
+
+    logger->info("Start of module data dump...");
+    logger->info("Module path: {}", shared::Util::ToUTF8(m_path));
+    logger->info("Size of module: {}", m_rawSize);
+    logger->info("Size of mapped module: {}", m_modulePeFileData.size());
+    logger->info("Size of PE headers: {}", m_sizeOfHeaders);
+    logger->info("Relocation count: {}", m_relocations.size());
+    logger->info("Function entry count: {}", m_functionEntries.size());
+    logger->info("Has large RWX sections: {}, is small for integrity: {}", shared::PE::HasLargeRWXSections(m_image),
+                 shared::PE::IsIntegrityCheckableImageSizeSmall(m_image));
+
+    logger->info("Raw SHA256: {}", m_sha256);
+    logger->info("Is trusted by WinVerifyTrust: {}", m_isTrusted);
+    logger->info("End of module data dump...");
+}
+
 pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& aModule,
                                                       pico::shared::PE::Image* aImage,
                                                       pico::Bool aIsClientModule) const noexcept
@@ -102,12 +138,12 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
     }
 
     // We should dump such images
-    if (pico::shared::PE::HasLargeRWXSections(aModule.m_image))
+    if (shared::PE::HasLargeRWXSections(aModule.m_image))
     {
         logger->warn("Image has large RWX sections! This is potentially a sign of cheating.");
     }
 
-    if (pico::shared::PE::IsIntegrityCheckableImageSizeSmall(aModule.m_image))
+    if (shared::PE::IsIntegrityCheckableImageSizeSmall(aModule.m_image))
     {
         logger->warn("Image has not much read-only to check!");
     }
