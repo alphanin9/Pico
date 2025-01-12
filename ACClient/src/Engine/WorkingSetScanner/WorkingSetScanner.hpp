@@ -11,9 +11,8 @@ namespace pico::Engine
  * We then proceed to walk it to find executable pages. If a page is executable, we call VirtualQuery on it to obtain
  * whether or not the page belongs to a section, along with its allocation size.
  *
- * If the page does not belong to a section and its allocation size is larger than 64kB + 1 byte (to avoid false
- * positives from overlay detour trampolines), we log the offending memory region. In production, we should also send
- * the offending pages to the backend for further analysis.
+ * If the page does not belong to a section and its allocation size is larger than 2kB, we log the offending memory region. In production, we should also send
+ * the offending pages to the backend for further analysis. This may cause false positives with detour trampolines.
  *
  * Note that this may fail if the image has a kernel mode driver attempting to hide it with VAD manipulation/whatnot.
  */
@@ -23,6 +22,16 @@ struct WorkingSetScanner : public shared::Util::NonCopyableOrMovable
     // Although non-executable entries might update quite often, executable ones will update much rarer.
     pico::Vector<Windows::MEMORY_WORKING_SET_BLOCK> m_workingSetCache{};
     std::chrono::high_resolution_clock::time_point m_nextWorkingSetCacheUpdate{};
+
+    /**
+     * \brief Walks the process working set in search of potential shellcode/manually mapped images.
+     */
+    void WalkWorkingSet() noexcept;
+
+    /**
+     * \brief Walks the process's shared memory (section objects) in search of potentially badly loaded libraries.
+     */
+    void WalkSections() noexcept;
 
     /**
      * \brief Ticks component in the thread pool worker.

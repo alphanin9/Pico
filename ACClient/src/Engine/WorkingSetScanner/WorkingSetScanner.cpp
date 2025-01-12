@@ -4,10 +4,7 @@
 
 void pico::Engine::WorkingSetScanner::Tick() noexcept
 {
-    // Note: In CS2, 0x4000 will also catch trampolines made by GameOverlayRenderer64.dll
-    // The maximum trampoline allocation size by overlay renderer seems to be 0x10000u
-    // So, make it 0x10001u?
-    constexpr auto MaxExecutableAllocationSize = 0x10001u;
+    
 
     // Time between working set updates, as querying the working set every frame is expensive
     constexpr std::chrono::seconds WorkingSetUpdateTime{5};
@@ -35,15 +32,28 @@ void pico::Engine::WorkingSetScanner::Tick() noexcept
 
         logger->info("Time to capture working set: {}ms", taken);
         m_nextWorkingSetCacheUpdate = timestamp + WorkingSetUpdateTime;
+
+        WalkWorkingSet();
+        WalkSections();
     }
+}
+
+void pico::Engine::WorkingSetScanner::WalkWorkingSet() noexcept
+{
+    // Note: In CS2, 0x2000 will also catch trampolines made by GameOverlayRenderer64.dll
+    // The maximum trampoline allocation size by overlay renderer seems to be 0x10000u
+    // So, make it 0x10001u? No, less safe for small binaries
+    constexpr auto MaxExecutableAllocationSize = 0x2000u;
+
+    auto& logger = Logger::GetLogSink();
 
     for (auto workingSetEntry : m_workingSetCache)
     {
         // Transform the VPN into an actual address
         const auto pageAddr = reinterpret_cast<void*>(workingSetEntry.VirtualPage * 0x1000);
 
-        // Skip non-executable pages and pages that belong to a section
-        if ((workingSetEntry.Protection & (1 << 1)) == 0 || workingSetEntry.Shared == 1)
+        // Skip non-executable pages and pages that belong to a section, we will scan sections later
+        if ((workingSetEntry.Protection & (1u << 1u)) == 0u || workingSetEntry.Shared == 1)
         {
             continue;
         }
@@ -73,6 +83,11 @@ void pico::Engine::WorkingSetScanner::Tick() noexcept
                           pageInfo.AllocationBase, pageInfo.State);
         }
     }
+}
+
+void pico::Engine::WorkingSetScanner::WalkSections() noexcept
+{
+    // TODO
 }
 
 pico::Engine::WorkingSetScanner& pico::Engine::WorkingSetScanner::Get() noexcept
