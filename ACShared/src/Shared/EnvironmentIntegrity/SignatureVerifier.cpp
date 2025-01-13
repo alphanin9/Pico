@@ -162,14 +162,8 @@ pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrust(pico::UnicodeStri
         const auto trustStatus =
             WinVerifyTrust(static_cast<HWND>(INVALID_HANDLE_VALUE), &s_defaultPolicy, data.addressof());
 
-        if (trustStatus == TRUST_E_NOSIGNATURE || trustStatus == CRYPT_E_FILE_ERROR ||
-            trustStatus == CERT_E_WRONG_USAGE)
-        {
-            // Maybe a catalog has the signature?
-            return VerifyFileTrustFromCatalog(aPath, aType);
-        }
-
-        return trustStatus == 0;
+        // Maybe a catalog has the signature?
+        return trustStatus == 0u || VerifyFileTrustFromCatalog(aPath, aType);
     }
     case EFileType::Driver:
     {
@@ -182,14 +176,8 @@ pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrust(pico::UnicodeStri
         const auto trustStatus =
             WinVerifyTrust(static_cast<HWND>(INVALID_HANDLE_VALUE), &s_driverPolicy, data.addressof());
 
-        if (trustStatus == TRUST_E_NOSIGNATURE || trustStatus == CRYPT_E_FILE_ERROR ||
-            trustStatus == CERT_E_WRONG_USAGE)
-        {
-            // Maybe a catalog has the signature?
-            return VerifyFileTrustFromCatalog(aPath, aType);
-        }
-
-        return trustStatus == 0;
+        // Maybe a catalog has the signature?
+        return trustStatus == 0u || VerifyFileTrustFromCatalog(aPath, aType);
     }
     }
 

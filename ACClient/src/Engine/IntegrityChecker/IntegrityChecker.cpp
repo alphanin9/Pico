@@ -13,7 +13,11 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) n
         return false;
     }
 
+    static auto& s_engine = Engine::Get();
+
+    s_engine.m_threadsUnderHeavyLoad++;
     m_isTrusted = shared::EnvironmentIntegrity::VerifyFileTrust(aModulePath);
+    s_engine.m_threadsUnderHeavyLoad--;
 
     pico::Path filePath = aModulePath;
 
@@ -55,6 +59,8 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) n
     {
         return false;
     }
+
+    m_rawSize = rawPeData.size();
 
     // Reset module data, fill with 0s
     m_modulePeFileData.assign(rawImage->get_nt_headers()->optional_header.size_image, {});
@@ -357,6 +363,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanClient() noexcept
         else
         {
             s_logger->error("Failed to refresh client module!");
+            return false;
         }
     }
 
@@ -435,6 +442,8 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
                             shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
             continue;
         }
+
+        moduleEntry.DumpModuleInfo();
 
         // We should not have too many consecutive integrity checks
         moduleEntry.m_lastIntegrityCheckTime = timestamp + std::chrono::seconds(i);
