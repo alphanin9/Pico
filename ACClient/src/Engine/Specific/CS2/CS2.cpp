@@ -104,10 +104,10 @@ void pico::Engine::Specific::CS2::WalkInterfaces() noexcept
 
         if (auto interfaceEntry = Detail::FindStartOfInterfaceData(moduleEntry))
         {
-            auto pe = reinterpret_cast<shared::PE::Image*>(moduleEntry);
+            const auto pe = reinterpret_cast<shared::PE::Image*>(moduleEntry);
 
-            auto imageMin = reinterpret_cast<uintptr_t>(moduleEntry);
-            auto imageMax = reinterpret_cast<uintptr_t>(moduleEntry + pe->get_nt_headers()->optional_header.size_image);
+            const auto imageMin = reinterpret_cast<uintptr_t>(moduleEntry);
+            const auto imageMax = imageMin + pe->get_nt_headers()->optional_header.size_image;
 
             for (auto entry = interfaceEntry; entry != nullptr; entry = entry->m_nextInterface)
             {
