@@ -96,7 +96,7 @@ void pico::Engine::ContextScanner::TickMainThread() noexcept
 
     // Align the stack pointer down, so we catch the whole page
     // Stack grows downwards
-    // Yes, we'll catch some unitialized memory - shouldn't matter
+    // Yes, we'll catch some uninitialized memory - shouldn't matter
     // And yes, having dynamic allocation on dynamic allocation is a bit silly too
     frame->m_stackPage.assign(engine.m_pageSize / sizeof(void*), {});
 

@@ -41,6 +41,13 @@ using SharedPtr = TiltedPhoques::SharedPtr<T>;
 template<typename T>
 using UniquePtr = TiltedPhoques::UniquePtr<T>;
 
+using Clock = std::chrono::high_resolution_clock;
+
+using Timestamp = Clock::time_point;
+
+using Seconds = std::chrono::seconds;
+using Milliseconds = std::chrono::milliseconds;
+
 template<typename T, typename... Args>
 inline pico::SharedPtr<T> MakeShared(Args&&... aArgs)
 {

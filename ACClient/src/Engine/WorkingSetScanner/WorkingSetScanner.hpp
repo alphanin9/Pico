@@ -26,25 +26,18 @@ struct WorkingSetScanner : public shared::Util::NonCopyableOrMovable
     // Although non-executable entries might update quite often, executable ones will update much rarer.
     pico::Vector<Windows::MEMORY_WORKING_SET_BLOCK> m_workingSetCache{};
 
-    // A set of already iterated virtual page numbers by VirtualQuery
-    // pico::Set<pico::Uint64> m_scannedPages{};
+    // The index from the previous iteration
+    pico::Size m_lastIndex{};
 
-    std::chrono::high_resolution_clock::time_point m_nextWorkingSetCacheUpdate{};
+    // Whether or not we're already done
+    pico::Bool m_doneWithScan{};
+
+    pico::Timestamp m_nextWorkingSetCacheUpdate{};
 
     /**
      * \brief Walks the process working set in search of potential shellcode/manually mapped images.
      */
     void WalkWorkingSet() noexcept;
-
-    /**
-     * \brief Processes a page in search for anomalous characteristics.
-     *
-     * This can probably be optimized in more ways than it currently is. Currently we only scan for private pages
-     * instead of handling shared ones as well.
-     *
-     * \param aBlock The working set entry block. Should be executable.
-     */
-    void ProcessPage(Windows::MEMORY_WORKING_SET_BLOCK aBlock) noexcept;
 
     /**
      * \brief Ticks component in the thread pool worker.

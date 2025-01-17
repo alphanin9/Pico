@@ -338,7 +338,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
 
 pico::Bool pico::Engine::IntegrityChecker::ScanClient() noexcept
 {
-    constexpr std::chrono::seconds ClientLibraryRefreshInterval{20};
+    constexpr pico::Seconds ClientLibraryRefreshInterval{20};
 
     static auto& s_engine = Engine::Get();
     auto& s_logger = Logger::GetLogSink();
@@ -350,7 +350,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanClient() noexcept
         return false;
     }
 
-    auto timestamp = std::chrono::high_resolution_clock::now();
+    auto timestamp = Clock::now();
 
     static ModuleData s_clientData{};
 
@@ -372,15 +372,15 @@ pico::Bool pico::Engine::IntegrityChecker::ScanClient() noexcept
 
 void pico::Engine::IntegrityChecker::Tick() noexcept
 {
-    constexpr std::chrono::seconds LoadedModuleListReportInterval{60};
-    constexpr std::chrono::seconds ModuleIntegrityCheckInterval{20};
+    constexpr pico::Seconds LoadedModuleListReportInterval{60};
+    constexpr pico::Seconds ModuleIntegrityCheckInterval{20};
 
     auto& s_logger = Logger::GetLogSink();
     static const auto& s_engine = Engine::Get();
 
-    auto timestamp = std::chrono::high_resolution_clock::now();
+    const auto timestamp = Clock::now();
 
-    auto loadedModules = shared::ProcessEnv::GetLoadedModuleList();
+    const auto loadedModules = shared::ProcessEnv::GetLoadedModuleList();
 
     pico::Set<pico::Uint64> presentModules{};
 
@@ -436,6 +436,9 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
             continue;
         }
 
+        // Reset entry
+        moduleEntry = {};
+
         if (!moduleEntry.Load(entry->FullDllName.Buffer))
         {
             s_logger->error("Failed to load module entry for {}, base address {}!",
@@ -446,11 +449,13 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
         moduleEntry.DumpModuleInfo();
 
         // We should not have too many consecutive integrity checks
-        moduleEntry.m_lastIntegrityCheckTime = timestamp + std::chrono::seconds(i);
+        moduleEntry.m_lastIntegrityCheckTime = timestamp + pico::Seconds(i);
 
         s_logger->info("Scanning module {} at base {}", shared::Util::ToUTF8(entry->BaseDllName.Buffer),
                        entry->DllBase);
 
+        // Note: add clause that disables engine wait here if the module is big enough! .text scanning is expensive,
+        // especially with our disassembler
         const auto status = ScanModule(moduleEntry, shared::PE::GetImagePtr(entry->DllBase), false);
 
         if (status)

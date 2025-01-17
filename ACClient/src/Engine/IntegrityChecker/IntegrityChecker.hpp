@@ -10,7 +10,7 @@ namespace pico::Engine
 struct ModuleData
 {
     // Last integrity check time
-    std::chrono::high_resolution_clock::time_point m_lastIntegrityCheckTime{};
+    pico::Timestamp m_lastIntegrityCheckTime{};
 
     // Module path
     pico::UnicodeString m_path{};
@@ -80,7 +80,7 @@ struct ModuleData
  */
 struct IntegrityChecker : public shared::Util::NonCopyableOrMovable
 {
-    std::chrono::high_resolution_clock::time_point m_lastTimeLoadedDllsReported{};
+    pico::Timestamp m_lastTimeLoadedDllsReported{};
 
     // Map of our process's loaded modules. Key is hash of module full path.
     pico::HashMap<pico::Uint64, ModuleData> m_moduleDataMap{};

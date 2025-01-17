@@ -82,13 +82,11 @@ pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept
         // this may also end up waiting on normal worker threads - good
         // Not actually very good, given we can have long-running jobs here!
 
-        const auto start = std::chrono::high_resolution_clock::now();
+        const auto start = Clock::now();
 
         threadPool.m_pool.wait();
 
-        const auto duration =
-            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start)
-                .count();
+        const auto duration = std::chrono::duration_cast<pico::Milliseconds>(Clock::now() - start).count();
 
         logger->info("Time taken to wait: {}ms", duration);
 
@@ -224,4 +222,14 @@ pico::Engine::Engine& pico::Engine::Engine::Get() noexcept
     static Engine s_instance{};
 
     return s_instance;
+}
+
+pico::Engine::EngineThreadLoadGuard::EngineThreadLoadGuard() noexcept
+{
+    Engine::Get().m_threadsUnderHeavyLoad++;
+}
+
+pico::Engine::EngineThreadLoadGuard::~EngineThreadLoadGuard() noexcept
+{
+    Engine::Get().m_threadsUnderHeavyLoad--;
 }

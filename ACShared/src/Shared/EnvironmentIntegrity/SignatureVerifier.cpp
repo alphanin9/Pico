@@ -3,7 +3,7 @@
 #include <Softpub.h>
 #include <WinTrust.h>
 
-namespace
+namespace Detail
 {
 /**
  * \brief Utility function to close Wintrust data for driver verification properly.
@@ -30,11 +30,14 @@ void SetupGeneralWintrustStructure(WINTRUST_DATA& aData, pico::Bool aIsDriver = 
 {
     aData.cbStruct = sizeof(WINTRUST_DATA);
     aData.dwUIChoice = WTD_UI_NONE;
-    aData.fdwRevocationChecks |= WTD_REVOKE_WHOLECHAIN;
+    aData.fdwRevocationChecks = 0u;
     aData.dwStateAction = WTD_STATEACTION_VERIFY;
     aData.dwUIContext = 0u;
     aData.dwUnionChoice = aIsCatalog ? WTD_CHOICE_CATALOG : WTD_CHOICE_FILE;
     aData.dwUIContext = WTD_UICONTEXT_EXECUTE;
+
+    // Make things a little faster, don't verify EVERYTHING with web
+    aData.dwProvFlags |= WTD_CACHE_ONLY_URL_RETRIEVAL;
 
     if (aIsDriver)
     {
@@ -50,7 +53,7 @@ static GUID s_defaultPolicy = WINTRUST_ACTION_GENERIC_VERIFY_V2;
 
 pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrustFromCatalog(pico::UnicodeStringView aPath, EFileType aType) noexcept
 {
-    auto& policy = aType == EFileType::Other ? s_defaultPolicy : s_driverPolicy;
+    auto& policy = aType == EFileType::Other ? Detail::s_defaultPolicy : Detail::s_driverPolicy;
 
     wil::shared_hcatadmin catalogAdmin{};
 
@@ -108,7 +111,7 @@ pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrustFromCatalog(pico::
                 {
                     wil::unique_wintrust_data data{};
 
-                    SetupGeneralWintrustStructure(*data.addressof(), false, true);
+                    Detail::SetupGeneralWintrustStructure(*data.addressof(), false, true);
 
                     data.pCatalog = &catalogTrustInfo;
 
@@ -121,9 +124,9 @@ pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrustFromCatalog(pico::
                 }
                 case EFileType::Driver:
                 {
-                    WintrustDriverData data{};
+                    Detail::WintrustDriverData data{};
 
-                    SetupGeneralWintrustStructure(*data.addressof(), true, true);
+                    Detail::SetupGeneralWintrustStructure(*data.addressof(), true, true);
 
                     data.pCatalog = &catalogTrustInfo;
 
@@ -155,26 +158,26 @@ pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrust(pico::UnicodeStri
     {
         wil::unique_wintrust_data data{};
 
-        SetupGeneralWintrustStructure(*data.addressof());
+        Detail::SetupGeneralWintrustStructure(*data.addressof());
 
         data.pFile = &fileInfo;
 
         const auto trustStatus =
-            WinVerifyTrust(static_cast<HWND>(INVALID_HANDLE_VALUE), &s_defaultPolicy, data.addressof());
+            WinVerifyTrust(static_cast<HWND>(INVALID_HANDLE_VALUE), &Detail::s_defaultPolicy, data.addressof());
 
         // Maybe a catalog has the signature?
         return trustStatus == 0u || VerifyFileTrustFromCatalog(aPath, aType);
     }
     case EFileType::Driver:
     {
-        WintrustDriverData data{};
+        Detail::WintrustDriverData data{};
 
-        SetupGeneralWintrustStructure(*data.addressof(), true);
+        Detail::SetupGeneralWintrustStructure(*data.addressof(), true);
 
         data.pFile = &fileInfo;
 
         const auto trustStatus =
-            WinVerifyTrust(static_cast<HWND>(INVALID_HANDLE_VALUE), &s_driverPolicy, data.addressof());
+            WinVerifyTrust(static_cast<HWND>(INVALID_HANDLE_VALUE), &Detail::s_driverPolicy, data.addressof());
 
         // Maybe a catalog has the signature?
         return trustStatus == 0u || VerifyFileTrustFromCatalog(aPath, aType);

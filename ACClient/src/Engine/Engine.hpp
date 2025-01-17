@@ -92,4 +92,17 @@ struct Engine : shared::Util::NonCopyableOrMovable
      */
     static Engine& Get() noexcept;
 };
+
+/**
+ * \brief A helper structure to manage Engine::m_threadsUnderHeavyLoad.
+ * 
+ * When constructed, increments Engine::m_threadsUnderHeavyLoad by one.
+ * 
+ * When destructed, decrements Engine::m_threadsUnderHeavyLoad by one.
+ */
+struct EngineThreadLoadGuard : shared::Util::NonCopyable
+{
+    EngineThreadLoadGuard() noexcept;
+    ~EngineThreadLoadGuard() noexcept;
+};
 }

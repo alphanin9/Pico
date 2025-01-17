@@ -60,7 +60,8 @@ InterfaceData* FindStartOfInterfaceData(HMODULE aModule)
         {
             uintptr_t absoluteAddr{};
 
-            if (ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(&instr, &operands[1], disassemblyCursor, &absoluteAddr)))
+            if (ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(&instr, &operands[1], disassemblyCursor, &absoluteAddr)) &&
+                absoluteAddr)
             {
                 // A bit hacky, we should be checking if it leads to a valid place in the module as well
                 return *reinterpret_cast<InterfaceData**>(absoluteAddr);

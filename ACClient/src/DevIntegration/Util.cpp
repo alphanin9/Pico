@@ -37,7 +37,7 @@ void pico::Integration::WaitUntilModuleLoaded(pico::shared::HashedString aModule
     // Just yield until we're good
     while (shared::ProcessEnv::GetModuleByName(aModuleName) == nullptr)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(pico::Milliseconds(50));
     }
 }
 
@@ -59,7 +59,7 @@ void pico::Integration::WaitUntilOneOfModulesLoaded(
 
         if (!hasLoaded)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(pico::Milliseconds(50));
         }
     } while (!hasLoaded);
 }
