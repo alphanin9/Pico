@@ -68,14 +68,14 @@ void pico::Engine::HandleSnap::Tick() noexcept
 
         if (!isProcess && !isThread)
         {
-            return;
+            continue;
         }
 
         wil::unique_handle ownerHandle{OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_DUP_HANDLE, false, pid)};
 
         if (!ownerHandle.is_valid())
         {
-            return;
+            continue;
         }
 
         checkedHandles++;

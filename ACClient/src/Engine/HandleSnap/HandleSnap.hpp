@@ -5,8 +5,8 @@ namespace pico::Engine
 {
 /**
  * \brief A module to detect potential external hacks. Walks through the system handle information and attempts to
- * enumerate the handles open to us with dangerous rights (reading virtual memory/writing virtual memory/creating a new
- * thread in us).
+ * enumerate the handles open to our process or threads with dangerous rights (reading virtual memory/writing virtual
+ * memory/creating a new thread in us).
  *
  * As we do not operate on higher privilege levels (theoretically, we could have a service enumerate handles for us or
  * make the user start the process as administrator and then we would have capability to get info for every process -
@@ -33,11 +33,12 @@ struct HandleSnap : public shared::Util::NonCopyableOrMovable
 
     /**
      * \brief Called when a process handle needs to be checked in the tick function's handle enumeration.
-     * 
+     *
      * \param aEntry The handle table entry.
      * \param aOwner The owner of the handle in question.
      */
-    void OnProcessHandleCheck(const Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX& aEntry, const wil::unique_handle& aOwner) noexcept;
+    void OnProcessHandleCheck(const Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX& aEntry,
+                              const wil::unique_handle& aOwner) noexcept;
 
     /**
      * \brief Called when a thread handle needs to be checked in the tick function's handle enumeration.
@@ -45,7 +46,8 @@ struct HandleSnap : public shared::Util::NonCopyableOrMovable
      * \param aEntry The handle table entry.
      * \param aOwner The owner of the handle in question.
      */
-    void OnThreadHandleCheck(const Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX& aEntry, const wil::unique_handle& aOwner) noexcept;
+    void OnThreadHandleCheck(const Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX& aEntry,
+                             const wil::unique_handle& aOwner) noexcept;
 
     /**
      * \brief Get a singleton instance of the integrity checker.
