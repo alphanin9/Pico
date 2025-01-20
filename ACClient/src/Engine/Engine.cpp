@@ -1,5 +1,6 @@
 #include <Engine/ContextScanner/ContextScanner.hpp>
 #include <Engine/Engine.hpp>
+#include <Engine/HandleSnap/HandleSnap.hpp>
 #include <Engine/IntegrityChecker/IntegrityChecker.hpp>
 #include <Engine/Logging/Logger.hpp>
 #include <Engine/ThreadPool/ThreadPool.hpp>
@@ -24,6 +25,7 @@ void pico::Engine::Engine::Tick() noexcept
     threadPool.Dispatch([]() { ContextScanner::Get().Tick(); });
     threadPool.Dispatch([]() { IntegrityChecker::Get().Tick(); });
     threadPool.Dispatch([]() { WorkingSetScanner::Get().Tick(); });
+    threadPool.Dispatch([]() { HandleSnap::Get().Tick(); });
 
     static const auto s_isCS2 = Integration::IsCS2();
 

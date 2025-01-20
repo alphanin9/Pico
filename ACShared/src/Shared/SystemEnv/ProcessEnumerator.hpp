@@ -15,21 +15,23 @@ namespace pico::shared::SystemEnv
 template<typename Fn>
 void EnumerateRunningProcesses(Fn&& aCallbackFunc)
 {
-    pico::Uint32 bufferSize = 0x1000;
+    constexpr pico::Uint32 BufferSize = 0x4000;
 
     // Initialize a buffer for our output
     // A lot of Ntdll system calls and adjacent WinAPI interfaces will follow this pattern
-    pico::Vector<pico::Uint8> buffer(bufferSize, pico::Uint8(0));
+    pico::Vector<pico::Uint8> buffer(BufferSize, {});
+
+    pico::Uint32 sizeNeeded{};
 
     auto status = Windows::NtQuerySystemInformation(Windows::SYSTEM_INFORMATION_CLASS::SystemExtendedProcessInformation,
-                                                    buffer.data(), bufferSize, bufferSize);
+                                                    buffer.data(), buffer.size(), sizeNeeded);
 
     // Resize it until we don't get error anymore
     while (status == STATUS_INFO_LENGTH_MISMATCH)
     {
-        buffer.resize(bufferSize);
+        buffer.resize(sizeNeeded);
         status = Windows::NtQuerySystemInformation(Windows::SYSTEM_INFORMATION_CLASS::SystemExtendedProcessInformation,
-                                                   buffer.data(), bufferSize, bufferSize);
+                                                   buffer.data(), buffer.size(), sizeNeeded);
     }
 
     if (!NT_SUCCESS(status))

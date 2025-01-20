@@ -63,3 +63,27 @@ Windows::LDR_DATA_TABLE_ENTRY* pico::shared::ProcessEnv::GetModuleByName(pico::s
 {
     return GetModuleByHash(aHash);
 }
+
+pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION> pico::shared::ProcessEnv::GetCurrentProcessThreads() noexcept
+{
+    pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION> threadInfo{};
+    // Note: the HANDLE cast is actually correct, as SYSTEM_EXTENDED_PROCESS_INFORMATION::UniqueProcessId is actually
+    // HANDLE
+
+    static const auto s_pid =
+        reinterpret_cast<HANDLE>(pico::shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
+    shared::SystemEnv::EnumerateRunningProcesses(
+        [&threadInfo](Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION* aProc,
+                      const pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION*>& aThreads)
+        {
+            if (aProc->UniqueProcessId == s_pid)
+            {
+                for (auto i : aThreads)
+                {
+                    threadInfo.push_back(*i);
+                }
+            }
+        });
+
+    return threadInfo;
+}

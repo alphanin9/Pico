@@ -6,9 +6,9 @@
 namespace pico::shared::ProcessEnv
 {
 /**
-* \brief Gets a pointer to the process environment block.
-* \returns A pointer to the process environment block.
-*/
+ * \brief Gets a pointer to the process environment block.
+ * \returns A pointer to the process environment block.
+ */
 Windows::PEB* GetProcessEnvironment() noexcept;
 
 /**
@@ -18,31 +18,32 @@ Windows::PEB* GetProcessEnvironment() noexcept;
 Windows::TEB64* GetCurrentThreadEnvironment() noexcept;
 
 /**
-* \brief Enumerates all loaded modules and returns a vector of them.
-* \returns A vector of the current loaded modules.
-*/
+ * \brief Enumerates all loaded modules and returns a vector of them.
+ * \returns A vector of the current loaded modules.
+ */
 pico::Vector<Windows::LDR_DATA_TABLE_ENTRY*> GetLoadedModuleList() noexcept;
 
 /**
- * \brief Enumerates loaded modules. If the module with a case-insensitive FNV1a64 hash of aHash is present, returns a pointer to it.
- * \param aHash A case-insensitive FNV1a64 hash of the desired module's file name.
- * \returns The pointer to the specified module if it's loaded. If the module is not loaded, returns nullptr.
+ * \brief Enumerates loaded modules. If the module with a case-insensitive FNV1a64 hash of aHash is present, returns a
+ * pointer to it. \param aHash A case-insensitive FNV1a64 hash of the desired module's file name. \returns The pointer
+ * to the specified module if it's loaded. If the module is not loaded, returns nullptr.
  */
 Windows::LDR_DATA_TABLE_ENTRY* GetModuleByHash(pico::Uint64 aHash) noexcept;
 
 /**
- * \brief Enumerates loaded modules. If the module with the corresponding file name is present, returns a pointer to it. 
- * \param aHash The desired module's file name. 
+ * \brief Enumerates loaded modules. If the module with the corresponding file name is present, returns a pointer to it.
+ * \param aHash The desired module's file name.
  * \returns The pointer to the specified module if it's loaded. If the module is not loaded, returns nullptr.
  */
 Windows::LDR_DATA_TABLE_ENTRY* GetModuleByName(pico::shared::HashedString aHash) noexcept;
 
 /**
-* \brief Enumerates modules loaded into current process.
-* 
-* \tparam Fn Type of function. Function signature should be pico::Bool(Windows::LDR_DATA_TABLE_ENTRY*);
-* \param aCallback Callback function called on each module entry. If the callback function returns true, the loop is ended. 
-*/
+ * \brief Enumerates modules loaded into current process.
+ *
+ * \tparam Fn Type of function. Function signature should be pico::Bool(Windows::LDR_DATA_TABLE_ENTRY*);
+ * \param aCallback Callback function called on each module entry. If the callback function returns true, the loop is
+ * ended.
+ */
 template<typename Fn>
 inline void EnumerateLoadedModules(Fn&& aCallback) noexcept
 {
@@ -61,4 +62,11 @@ inline void EnumerateLoadedModules(Fn&& aCallback) noexcept
         }
     }
 }
-}
+
+/**
+ * \brief Get a vector of the current process's threads. Could be extended to provide similar capabilities for other
+ * processes. Note that this is not particularly fast. \return A vector of structs describing the current process's
+ * owned threads. Note that a thread might exit between gathering and returning.
+ */
+pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION> GetCurrentProcessThreads() noexcept;
+} // namespace pico::shared::ProcessEnv

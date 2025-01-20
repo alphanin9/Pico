@@ -30,9 +30,6 @@ InterfaceData* FindStartOfInterfaceData(HMODULE aModule)
 {
     constexpr auto MaxInstructionCount = 8;
 
-    // Note: no error check needed here, the module is known to be good
-    auto pe = reinterpret_cast<pico::shared::PE::Image*>(aModule);
-
     auto disassemblyCursor = reinterpret_cast<uintptr_t>(GetProcAddress(aModule, "CreateInterface"));
 
     if (!disassemblyCursor)
@@ -111,8 +108,8 @@ void pico::Engine::Specific::CS2::WalkInterfaces() noexcept
 
             for (auto entry = interfaceEntry; entry != nullptr; entry = entry->m_nextInterface)
             {
-                // NOTE: we should check if the interface leads to a pointer in read-write section of the module as well
-                auto interfaceVtable = *entry->m_queryFunc();
+                // NOTE: we should check if the interface data pointer leads to a pointer in read-write section of the module as well
+                const auto interfaceVtable = *entry->m_queryFunc();
 
                 // Interface vtable is out of bounds? That's certainly not what legitimate software would do.
                 if (interfaceVtable < imageMin || interfaceVtable > imageMax)

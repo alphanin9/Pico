@@ -1,73 +1,175 @@
+#include <Engine/Engine.hpp>
 #include <Engine/HandleSnap/HandleSnap.hpp>
 #include <Engine/Logging/Logger.hpp>
+
 void pico::Engine::HandleSnap::Tick() noexcept
 {
-    constexpr pico::Seconds CheckDuration{5};
+    static const auto s_localPid =
+        static_cast<pico::Uint32>(shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
+
+    constexpr pico::Seconds CheckInterval{5};
     const auto now = Clock::now();
 
-    if (now - m_lastCheckTime <= CheckDuration)
+    if (now - m_lastCheckTime > CheckInterval)
+    {
+        // Make sure no stutters happen
+        EngineThreadLoadGuard guard{};
+
+        m_isDone = false;
+        m_lastHandleIndex = 0u;
+        m_lastCheckTime = now;
+
+        const auto start = Clock::now();
+
+        m_handleEntryCache = shared::SystemEnv::GetHandleTable();
+
+        const auto duration = std::chrono::duration_cast<pico::Milliseconds>(Clock::now() - start).count();
+
+        Logger::GetLogSink()->info("Time taken to cache handle table: {}ms", duration);
+    }
+
+    if (m_isDone)
     {
         return;
     }
 
-    m_lastCheckTime = now;
+    // Keep overall load low, we utilize a similar pattern as with the process working set scanner to spread the load
+    // around calls
+    constexpr auto MaxCheckedHandlesPerTick = 64;
 
-    static const auto s_pid = static_cast<pico::Uint32>(shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
+    // The amount of process handles we managed to open this time around
+    auto checkedHandles = 0;
 
-    shared::SystemEnv::EnumerateHandles(
-        [](const Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX& aEntry)
+    constexpr pico::Uint32 SystemIdleProcId = 0u;
+    constexpr pico::Uint32 SystemUniqueProcessId = 4u;
+
+    for (auto i = m_lastHandleIndex; i < m_handleEntryCache.size(); i++)
+    {
+        if (checkedHandles > MaxCheckedHandlesPerTick)
         {
-            // Hack, we should resolve this dynamically
-            constexpr auto ObjectTypeProcess = 8u;
+            m_lastHandleIndex = i;
+            return;
+        }
 
-            auto& logger = Logger::GetLogSink();
+        auto& entry = m_handleEntryCache[i];
 
-            // Note: should check for thread handles to us too, but later
-            if (aEntry.ObjectTypeIndex != ObjectTypeProcess)
-            {
-                return;
-            }
+        const auto pid = reinterpret_cast<pico::Uint32>(entry.UniqueProcessId);
 
-            // Handle doesn't do much
-            if ((aEntry.GrantedAccess & PROCESS_CREATE_THREAD) == 0u &&
-                (aEntry.GrantedAccess & PROCESS_VM_OPERATION) == 0u && (aEntry.GrantedAccess & PROCESS_VM_READ) == 0u &&
-                (aEntry.GrantedAccess & PROCESS_VM_WRITE) == 0u)
-            {
-                return;
-            }
+        if (pid == SystemIdleProcId || pid == SystemUniqueProcessId || pid == s_localPid)
+        {
+            continue;
+        }
 
-            const auto pid = reinterpret_cast<pico::Uint32>(aEntry.UniqueProcessId);
+        constexpr auto ObjectTypeProcess = 8u;
+        constexpr auto ObjectTypeThread = 9u;
 
-            // Open a handle, if we can't - well we're screwed
-            // Nonetheless we should take a snapshot of all running processes every now and then as well, dump some
-            // stuff about them and all
-            wil::unique_handle procHandle{OpenProcess(reinterpret_cast<DWORD>(aEntry.UniqueProcessId), false,
-                                                      PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_DUP_HANDLE)};
+        const auto isProcess = entry.ObjectTypeIndex == ObjectTypeProcess;
+        const auto isThread = entry.ObjectTypeIndex == ObjectTypeThread;
 
-            // We can't query even limited info about the process from here
-            if (!procHandle.is_valid())
-            {
-                logger->warn("Failed to open a handle to PID {}", pid);
-            }
+        if (!isProcess && !isThread)
+        {
+            return;
+        }
 
-            wil::unique_handle dupHandle{};
+        wil::unique_handle ownerHandle{OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_DUP_HANDLE, false, pid)};
 
-            if (!NT_SUCCESS(Windows::NtDuplicateObject(procHandle.get(), aEntry.HandleValue, GetCurrentProcess(), *dupHandle.addressof(), PROCESS_QUERY_LIMITED_INFORMATION, 0u, 0u))) {
-                logger->warn("Failed to duplicate handle from PID {}", pid);
-                return;
-            }
+        if (!ownerHandle.is_valid())
+        {
+            return;
+        }
 
-            const auto targetPid = GetProcessId(dupHandle.get());
+        checkedHandles++;
 
-            if (targetPid == s_pid)
-            {
-                pico::UnicodeString procName{};
-                wil::QueryFullProcessImageNameW(procHandle.get(), PROCESS_NAME_NATIVE, procName);
+        if (isProcess)
+        {
+            OnProcessHandleCheck(entry, ownerHandle);
+        }
+        else
+        {
+            OnThreadHandleCheck(entry, ownerHandle);
+        }
+    }
 
-                logger->warn("Process {} has a potentially dangerous handle open to us!",
-                             shared::Util::ToUTF8(procName));
-            }
-        });
+    m_isDone = true;
+}
+
+void pico::Engine::HandleSnap::OnProcessHandleCheck(const Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX& aEntry,
+                                                    const wil::unique_handle& aOwner) noexcept
+{
+    constexpr auto CheckedMask = PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE;
+
+    static const auto s_localPid =
+        static_cast<pico::Uint32>(shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
+    static const auto s_currentProcess = GetCurrentProcess();
+
+    if ((aEntry.GrantedAccess & CheckedMask) == 0u)
+    {
+        // The entry doesn't matter in all likelihood
+        return;
+    }
+
+    auto& logger = Logger::GetLogSink();
+
+    wil::unique_handle dupHandle{};
+
+    const auto pid = reinterpret_cast<pico::Uint32>(aEntry.UniqueProcessId);
+
+    if (!NT_SUCCESS(Windows::NtDuplicateObject(aOwner.get(), aEntry.HandleValue, s_currentProcess,
+                                               *dupHandle.addressof(), PROCESS_QUERY_LIMITED_INFORMATION, 0u, 0u)))
+    {
+        logger->warn("Failed to duplicate process handle from PID {}", pid);
+        return;
+    }
+
+    const auto targetPid = GetProcessId(dupHandle.get());
+
+    if (targetPid == s_localPid)
+    {
+        pico::UnicodeString procName{};
+        wil::QueryFullProcessImageNameW(aOwner.get(), 0u, procName);
+
+        logger->warn("Process {} (PID {}) has a potentially dangerous process handle ({}, access: {}) open to us!",
+                     shared::Util::ToUTF8(procName), pid, aEntry.HandleValue, aEntry.GrantedAccess);
+    }
+}
+
+void pico::Engine::HandleSnap::OnThreadHandleCheck(const Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX& aEntry,
+                                                   const wil::unique_handle& aOwner) noexcept
+{
+    constexpr auto CheckedMask = THREAD_TERMINATE | THREAD_SUSPEND_RESUME | THREAD_SET_CONTEXT | THREAD_GET_CONTEXT;
+
+    static const auto s_localPid =
+        static_cast<pico::Uint32>(shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
+    static const auto s_currentProcess = GetCurrentProcess();
+
+    if ((aEntry.GrantedAccess & CheckedMask) == 0u)
+    {
+        return;
+    }
+
+    auto& logger = Logger::GetLogSink();
+
+    wil::unique_handle dupHandle{};
+
+    const auto pid = reinterpret_cast<pico::Uint32>(aEntry.UniqueProcessId);
+
+    if (!NT_SUCCESS(Windows::NtDuplicateObject(aOwner.get(), aEntry.HandleValue, s_currentProcess,
+                                               *dupHandle.addressof(), THREAD_QUERY_LIMITED_INFORMATION, 0u, 0u)))
+    {
+        logger->warn("Failed to duplicate thread handle from PID {}", pid);
+        return;
+    }
+
+    const auto targetPid = GetProcessIdOfThread(dupHandle.get());
+
+    if (targetPid == s_localPid)
+    {
+        pico::UnicodeString procName{};
+        wil::QueryFullProcessImageNameW(aOwner.get(), 0u, procName);
+
+        logger->warn("Process {} (PID {}) has a potentially dangerous thread handle ({}, access: {}) open to us!",
+                     shared::Util::ToUTF8(procName), pid, aEntry.HandleValue, aEntry.GrantedAccess);
+    }
 }
 
 pico::Engine::HandleSnap& pico::Engine::HandleSnap::Get() noexcept

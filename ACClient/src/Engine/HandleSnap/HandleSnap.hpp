@@ -17,10 +17,35 @@ struct HandleSnap : public shared::Util::NonCopyableOrMovable
 {
     pico::Timestamp m_lastCheckTime{};
 
+    // Our last index in the handle table
+    pico::Size m_lastHandleIndex{};
+
+    // Are we done with this round?
+    pico::Bool m_isDone{};
+
+    // A cache of handle entries
+    pico::Vector<Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX> m_handleEntryCache{};
+
     /**
      * \brief Tick component in thread pool.
      */
     void Tick() noexcept;
+
+    /**
+     * \brief Called when a process handle needs to be checked in the tick function's handle enumeration.
+     * 
+     * \param aEntry The handle table entry.
+     * \param aOwner The owner of the handle in question.
+     */
+    void OnProcessHandleCheck(const Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX& aEntry, const wil::unique_handle& aOwner) noexcept;
+
+    /**
+     * \brief Called when a thread handle needs to be checked in the tick function's handle enumeration.
+     *
+     * \param aEntry The handle table entry.
+     * \param aOwner The owner of the handle in question.
+     */
+    void OnThreadHandleCheck(const Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX& aEntry, const wil::unique_handle& aOwner) noexcept;
 
     /**
      * \brief Get a singleton instance of the integrity checker.
