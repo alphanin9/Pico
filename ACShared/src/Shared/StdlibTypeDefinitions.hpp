@@ -78,6 +78,10 @@ using Double = double;
 using Char = char;
 using WChar = wchar_t;
 using Size = size_t;
+
+using AtomicInt = std::atomic_int;
+using AtomicInt64 = std::atomic_int64_t;
+using AtomicBool = std::atomic_bool;
 #pragma endregion
 } // namespace pico
 

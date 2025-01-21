@@ -11,7 +11,7 @@ struct Engine : shared::Util::NonCopyableOrMovable
     // Counter to track how many threads in the thread pool are under heavy load that should not be waited for
     // Should never go below 0
     // Not sure about the design, makes it easy to break
-    std::atomic_int m_threadsUnderHeavyLoad{};
+    pico::AtomicInt m_threadsUnderHeavyLoad{};
 
     // Whether or not we've initialized
     pico::Bool m_hasRunPreflight{};

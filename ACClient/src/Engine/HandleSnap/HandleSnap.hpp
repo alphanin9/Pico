@@ -15,6 +15,9 @@ namespace pico::Engine
  */
 struct HandleSnap : public shared::Util::NonCopyableOrMovable
 {
+    // Whether or not the component is currently running its tick function. (TODO)
+    pico::AtomicBool m_isExecuting{};
+
     pico::Timestamp m_lastCheckTime{};
 
     // Our last index in the handle table

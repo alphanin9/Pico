@@ -5,13 +5,13 @@
 
 void pico::Engine::ContextScanner::TickMainThread() noexcept
 {
-    const auto& engine = Engine::Get();
-    const auto& threadPool = ThreadPool::Get();
+    static const auto& s_engine = Engine::Get();
+    static const auto& s_threadPool = ThreadPool::Get();
 
-    auto& logger = Logger::Get();
+    auto& logger = Logger::GetLogSink();
 
     // Vector might actually be faster here due to cache
-    pico::Set<pico::Uint32> whitelistedIds{threadPool.m_threadIds.begin(), threadPool.m_threadIds.end()};
+    pico::Set<pico::Uint32> whitelistedIds{s_threadPool.m_threadIds.begin(), s_threadPool.m_threadIds.end()};
 
     static const auto s_pid = shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess;
 
@@ -49,7 +49,7 @@ void pico::Engine::ContextScanner::TickMainThread() noexcept
 
     if (selection.empty())
     {
-        logger.m_logger->info("No threads found!");
+        logger->info("No threads found!");
         return;
     }
 
@@ -65,13 +65,13 @@ void pico::Engine::ContextScanner::TickMainThread() noexcept
 
     if (!threadHandle.is_valid())
     {
-        logger.m_logger->info("Failed to open handle to thread {}!", threadId);
+        logger->info("Failed to open handle to thread {}!", threadId);
         return;
     }
 
     if (SuspendThread(threadHandle.get()) == std::numeric_limits<pico::Uint32>::max())
     {
-        logger.m_logger->error("Failed to suspend thread {}!", threadId);
+        logger->error("Failed to suspend thread {}!", threadId);
         return;
     }
 
@@ -82,7 +82,7 @@ void pico::Engine::ContextScanner::TickMainThread() noexcept
 
     if (!GetThreadContext(threadHandle.get(), &ctx))
     {
-        logger.m_logger->error("Failed to get thread {} context!", threadId);
+        logger->error("Failed to get thread {} context!", threadId);
         return;
     }
 
@@ -98,16 +98,16 @@ void pico::Engine::ContextScanner::TickMainThread() noexcept
     // Stack grows downwards
     // Yes, we'll catch some uninitialized memory - shouldn't matter
     // And yes, having dynamic allocation on dynamic allocation is a bit silly too
-    frame->m_stackPage.assign(engine.m_pageSize / sizeof(void*), {});
+    frame->m_stackPage.assign(s_engine.m_pageSize / sizeof(void*), {});
 
-    auto pageLow = shared::Util::AlignDown(frame->m_rsp, static_cast<pico::Uint64>(engine.m_pageSize));
+    auto pageLow = shared::Util::AlignDown(frame->m_rsp, static_cast<pico::Uint64>(s_engine.m_pageSize));
 
     // Copy stack into frame
     std::copy_n(reinterpret_cast<void**>(pageLow), frame->m_stackPage.size(), frame->m_stackPage.begin());
 
     ResumeThread(threadHandle.get());
 
-    logger.m_logger->info("Dumped thread {} stack!", threadId);
+    logger->info("Dumped thread {} stack!", threadId);
 
     PushFrame(frame);
 }
@@ -120,9 +120,9 @@ pico::Bool IsProtectionExecutable(pico::Uint32 aProtection)
 
 void pico::Engine::ContextScanner::Tick() noexcept
 {
-    const auto& engine = Engine::Get();
+    static const auto& engine = Engine::Get();
 
-    auto& logger = Logger::Get();
+    auto& logger = Logger::GetLogSink();
 
     pico::Vector<pico::SharedPtr<ContextFrame>> contextFrames{};
 
@@ -171,8 +171,9 @@ void pico::Engine::ContextScanner::Tick() noexcept
 
                 if (!peImage)
                 {
-                    logger.m_logger->error(
-                        "Executable page of memory ({}, base {}) does not have associated PE file, is this JIT or manual map/shellcode?", addy, info.AllocationBase);
+                    logger->error("Executable page of memory ({}, base {}) does not have associated PE file, is this "
+                                  "JIT or manual map/shellcode?",
+                                  addy, info.AllocationBase);
                     continue;
                 }
 
@@ -180,12 +181,12 @@ void pico::Engine::ContextScanner::Tick() noexcept
 
                 if (FAILED(wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(peImage), moduleName)))
                 {
-                    logger.m_logger->error("Failed to get name of module {}!", reinterpret_cast<void*>(peImage));
+                    logger->error("Failed to get name of module {}!", reinterpret_cast<void*>(peImage));
                     continue;
                 }
 
-                logger.m_logger->info("Found address {} from {} (base {}) on stack of thread!", addy,
-                                      shared::Util::ToUTF8(moduleName), reinterpret_cast<void*>(peImage));
+                logger->info("Found address {} from {} (base {}) on stack of thread!", addy,
+                             shared::Util::ToUTF8(moduleName), reinterpret_cast<void*>(peImage));
             }
         }
     }

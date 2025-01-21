@@ -80,6 +80,9 @@ struct ModuleData
  */
 struct IntegrityChecker : public shared::Util::NonCopyableOrMovable
 {
+    // Whether or not the component is currently running its tick function. (TODO)
+    pico::AtomicBool m_isExecuting{};
+
     pico::Timestamp m_lastTimeLoadedDllsReported{};
 
     // Map of our process's loaded modules. Key is hash of module full path.

@@ -6,7 +6,7 @@ namespace pico::Engine
 /**
  * \brief A scanner of the current process's working set in an attempt to catch manually mapped modules and shellcode.
  *
- * Utilizes pico::shared::MemoryEnv::GetProcessWorkingSet to obtain a snapshot of the process's current working set.
+ * Utilizes the shared library to obtain our current process's working set.
  *
  * We then proceed to walk it to find executable pages. If a page is executable, we call VirtualQuery on it to obtain
  * whether or not the page belongs to a section, along with its allocation size.
@@ -19,8 +19,20 @@ namespace pico::Engine
  */
 struct WorkingSetScanner : public shared::Util::NonCopyableOrMovable
 {
+    // How often the memory buffer needs to be refreshed.
+    static constexpr pico::Seconds MemoryCacheRefreshTime{30};
+
+    // How often the process working set should be updated.
+    static constexpr pico::Seconds WorkingSetUpdateTime{5};
+
     // The maximum size of a non-image executable allocation before we log it.
-    static constexpr auto MaxExecutableAllocationSize = 0x2000u;
+    static constexpr pico::Size MaxExecutableAllocationSize = 0x2000u;
+
+    // Whether or not the component is currently running its tick function. (TODO)
+    pico::AtomicBool m_isExecuting{};
+
+    // The raw buffer containing the process working set entries. (TODO)
+    pico::Vector<pico::Uint8> m_workingSetBuffer{};
 
     // A cache of the process working set.
     // Although non-executable entries might update quite often, executable ones will update much rarer.

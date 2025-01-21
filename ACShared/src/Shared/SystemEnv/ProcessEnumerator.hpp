@@ -6,6 +6,18 @@
 namespace pico::shared::SystemEnv
 {
 /**
+ * \brief Queries processes running on the system.
+ *
+ * Fills a buffer pointed to by aBuffer with process information directly. In theory, this should cause
+ * fewer allocations.
+ *
+ * \param aBuffer The buffer system process information will be placed into.
+ *
+ * \return Whether or not filling the buffer succeeded.
+ */
+pico::Bool FillSystemProcessInformationBuffer(pico::Vector<pico::Uint8>& aBuffer) noexcept;
+
+/**
  * \brief Enumerates system processes.
  * 
  * \tparam Fn Function type. Specification is not required. Signature is void(Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION*, const pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION*>&);
@@ -15,28 +27,12 @@ namespace pico::shared::SystemEnv
 template<typename Fn>
 void EnumerateRunningProcesses(Fn&& aCallbackFunc)
 {
-    constexpr pico::Uint32 BufferSize = 0x4000;
-
     // Initialize a buffer for our output
     // A lot of Ntdll system calls and adjacent WinAPI interfaces will follow this pattern
-    pico::Vector<pico::Uint8> buffer(BufferSize, {});
+    pico::Vector<pico::Uint8> buffer{};
 
-    pico::Uint32 sizeNeeded{};
-
-    auto status = Windows::NtQuerySystemInformation(Windows::SYSTEM_INFORMATION_CLASS::SystemExtendedProcessInformation,
-                                                    buffer.data(), buffer.size(), sizeNeeded);
-
-    // Resize it until we don't get error anymore
-    while (status == STATUS_INFO_LENGTH_MISMATCH)
+    if (!pico::shared::SystemEnv::FillSystemProcessInformationBuffer(buffer))
     {
-        buffer.resize(sizeNeeded);
-        status = Windows::NtQuerySystemInformation(Windows::SYSTEM_INFORMATION_CLASS::SystemExtendedProcessInformation,
-                                                   buffer.data(), buffer.size(), sizeNeeded);
-    }
-
-    if (!NT_SUCCESS(status))
-    {
-        // Exit early
         return;
     }
 

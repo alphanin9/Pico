@@ -4,9 +4,6 @@
 
 void pico::Engine::WorkingSetScanner::Tick() noexcept
 {
-    // Time between working set updates, as querying the working set every frame is expensive
-    constexpr pico::Seconds WorkingSetUpdateTime{5};
-
     static auto& s_engine = Engine::Get();
     auto& logger = Logger::GetLogSink();
 
