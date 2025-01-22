@@ -47,9 +47,11 @@ struct ContextScanner : public shared::Util::NonCopyableOrMovable
 
     std::mutex m_contextScannerMutex{};
 
-    // Holder for context frames
-    // Note: a bit silly ATM given we can only have the one frame
-    pico::Vector<pico::SharedPtr<ContextFrame>> m_frames{};
+    // Buffer for received context frames before they can be processed
+    pico::Vector<pico::SharedPtr<ContextFrame>> m_receivedFrames{};
+
+    // Buffer for context frames in processing
+    pico::Vector<pico::SharedPtr<ContextFrame>> m_scannedFrames{};
 
     /**
      * \brief Tick component in main thread.

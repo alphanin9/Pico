@@ -50,7 +50,8 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) n
     std::ifstream file(filePath, std::ios::binary);
 
     // Read the entirety of the file from disk
-    // Maybe MapViewOfFile is better?
+    // Maybe MapViewOfFile is better? No, not sure if it lets us relocate right (though it should, as Ntdll uses it
+    // internally)
     file.read(reinterpret_cast<char*>(&rawPeData[0]), fileSize);
 
     auto rawImage = shared::PE::GetImagePtr(rawPeData.data());
@@ -213,6 +214,12 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
                     continue;
                 }
 
+                if (aIsClientModule)
+                {
+                    // Immediately react, no point tracing
+                    return false;
+                }
+
                 pico::Size instrSize{};
 
                 uintptr_t addyToDetourTarget{};
@@ -264,8 +271,6 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
     }
 
     // (Sorta) find vfunc pointer swaps by checking relocations
-    // Note: for whatever reason, this points to lots of other things around WinAPI too - could they be doing VFT swaps
-    // or is this an imports thing I haven't gotten the hang of yet?
     for (pico::Uint32 reloc : aModule.m_relocations)
     {
         auto relocSection = aModule.m_image->rva_to_section(reloc);
@@ -305,31 +310,44 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
         // Reloc is supposed to point in ourselves, but it points god-knows-where?
         if (!pe)
         {
+            success = false;
             MEMORY_BASIC_INFORMATION mbi{};
 
             if (!VirtualQuery(memoryRelocPtr, &mbi, sizeof(mbi)))
             {
+                logger->info("Relocation {} (source {}, RVA {}) does not have a valid virtual addr!", memoryRelocPtr,
+                             reinterpret_cast<void*>(memoryReloc), reloc);
                 continue;
             }
 
             if (!shared::MemoryEnv::IsProtectionExecutable(mbi.Protect) &&
                 !shared::MemoryEnv::IsProtectionExecutable(mbi.AllocationProtect))
             {
+                logger->info("Relocation {} (source {}, RVA {}) does not point to executable memory!", memoryRelocPtr,
+                             reinterpret_cast<void*>(memoryReloc), reloc);
                 continue;
             }
 
             logger->info("Relocation {} (source {}, RVA {}) points outside of an image! This is unlikely to be right.",
                          memoryRelocPtr, reinterpret_cast<void*>(memoryReloc), reloc);
+
             continue;
         }
 
         if (pe != aImage)
         {
+            success = false;
+
             pico::UnicodeString imageName{};
             wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(pe), imageName);
 
             logger->info("Relocation {} (source {}, RVA {}) points to module {} instead of correct module!",
                          memoryRelocPtr, reinterpret_cast<void*>(memoryReloc), reloc, shared::Util::ToUTF8(imageName));
+        }
+
+        if (aIsClientModule && !success)
+        {
+            return false;
         }
     }
 

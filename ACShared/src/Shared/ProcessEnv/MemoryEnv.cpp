@@ -2,7 +2,7 @@
 
 #include <lazy_importer.hpp>
 
-pico::Bool pico::shared::MemoryEnv::FillProcessWorkingSetBuffer(pico::Vector<pico::Uint8>& aBuffer)
+pico::Bool pico::shared::MemoryEnv::FillProcessWorkingSetBuffer(pico::Vector<pico::Uint8>& aBuffer) noexcept
 {
     constexpr pico::Size MinimumBufferSize = 0x8000u;
 

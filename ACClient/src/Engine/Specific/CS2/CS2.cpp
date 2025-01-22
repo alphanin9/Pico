@@ -10,7 +10,7 @@ namespace Detail
 struct InterfaceData
 {
     using OnQuery = uintptr_t* (*)();
-    /** 00, the function called to get the interface's address, generally looks something like lea rax, addy; ret; */
+    /* 00, the function called to get the interface's address, generally looks something like lea rax, [rip+rel]; ret; */
     OnQuery m_queryFunc{};
     const pico::Char* m_interfaceName{}; // 08, the name of the interface
     InterfaceData* m_nextInterface{};    // 10, a pointer to the next interface of the module

@@ -112,30 +112,22 @@ void pico::Engine::ContextScanner::TickMainThread() noexcept
     PushFrame(frame);
 }
 
-pico::Bool IsProtectionExecutable(pico::Uint32 aProtection)
-{
-    return aProtection == PAGE_EXECUTE || aProtection == PAGE_EXECUTE_READ || aProtection == PAGE_EXECUTE_READWRITE ||
-           aProtection == PAGE_EXECUTE_WRITECOPY;
-}
-
 void pico::Engine::ContextScanner::Tick() noexcept
 {
     static const auto& engine = Engine::Get();
 
     auto& logger = Logger::GetLogSink();
 
-    pico::Vector<pico::SharedPtr<ContextFrame>> contextFrames{};
-
     {
         std::unique_lock lock(m_contextScannerMutex);
 
-        contextFrames = std::move(m_frames);
-        m_frames = {};
+        m_scannedFrames = std::move(m_receivedFrames);
+        m_receivedFrames = {};
     }
 
     auto currentProcess = GetCurrentProcess();
 
-    for (auto& frame : contextFrames)
+    for (auto& frame : m_scannedFrames)
     {
         // Check RIP
         // Walk through stack, search for executable addrs
@@ -162,7 +154,8 @@ void pico::Engine::ContextScanner::Tick() noexcept
             }
 
             // It's a return address? Is someone trying to screw with protection?
-            if (IsProtectionExecutable(info.Protect) || IsProtectionExecutable(info.AllocationProtect))
+            if (shared::MemoryEnv::IsProtectionExecutable(info.Protect) ||
+                shared::MemoryEnv::IsProtectionExecutable(info.AllocationProtect))
             {
                 shared::PE::Image* peImage{};
 
@@ -196,7 +189,7 @@ void pico::Engine::ContextScanner::PushFrame(pico::SharedPtr<ContextFrame>& aFra
 {
     std::unique_lock lock(m_contextScannerMutex);
 
-    m_frames.push_back(aFrame);
+    m_receivedFrames.push_back(aFrame);
 }
 
 pico::Engine::ContextScanner& pico::Engine::ContextScanner::Get() noexcept
