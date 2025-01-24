@@ -34,7 +34,7 @@ void pico::Engine::Logger::DumpDataToFile(pico::StringView aFileNameTag, void* a
     auto base64Path =
         std::format("./{}/{:%Y%m%d%H%M%S}_{}_{}_BASE64.txt", m_dumpFolderName.c_str(), time, aFileNameTag, uuid);
 
-    m_logger->info("Dumping {} bytes of data to {}...", aDataSize, path);
+    m_logger->info("[Logger] Dumping {} bytes of data to {}...", aDataSize, path);
 
     std::ofstream file{path, std::ios::binary};
     std::ofstream base64File{base64Path, std::ios::binary};
@@ -47,8 +47,8 @@ void pico::Engine::Logger::DumpDataToFile(pico::StringView aFileNameTag, void* a
     file.write(reinterpret_cast<const char*>(aDataStart), aDataSize);
     base64File.write(base64.data(), base64.size());
 
-    m_logger->info("Wrote {} bytes to file {}", static_cast<pico::Int64>(file.tellp()), path);
-    m_logger->info("Wrote {} bytes to Base64 file {}", static_cast<pico::Int64>(base64File.tellp()), path);
+    m_logger->info("[Logger] Wrote {} bytes to file {}", static_cast<pico::Int64>(file.tellp()), path);
+    m_logger->info("[Logger] Wrote {} bytes to Base64 file {}", static_cast<pico::Int64>(base64File.tellp()), path);
 }
 
 pico::Engine::Logger& pico::Engine::Logger::Get() noexcept

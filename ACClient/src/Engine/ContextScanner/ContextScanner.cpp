@@ -65,13 +65,13 @@ void pico::Engine::ContextScanner::TickMainThread() noexcept
 
     if (!threadHandle.is_valid())
     {
-        logger->info("Failed to open handle to thread {}!", threadId);
+        logger->info("[ContextScanner] Failed to open handle to thread {}!", threadId);
         return;
     }
 
     if (SuspendThread(threadHandle.get()) == std::numeric_limits<pico::Uint32>::max())
     {
-        logger->error("Failed to suspend thread {}!", threadId);
+        logger->error("[ContextScanner] Failed to suspend thread {}!", threadId);
         return;
     }
 
@@ -82,7 +82,7 @@ void pico::Engine::ContextScanner::TickMainThread() noexcept
 
     if (!GetThreadContext(threadHandle.get(), &ctx))
     {
-        logger->error("Failed to get thread {} context!", threadId);
+        logger->error("[ContextScanner] Failed to get thread {} context!", threadId);
         return;
     }
 
@@ -107,7 +107,7 @@ void pico::Engine::ContextScanner::TickMainThread() noexcept
 
     ResumeThread(threadHandle.get());
 
-    logger->info("Dumped thread {} stack!", threadId);
+    logger->info("[ContextScanner] Dumped thread {} stack!", threadId);
 
     PushFrame(frame);
 }
@@ -164,7 +164,7 @@ void pico::Engine::ContextScanner::Tick() noexcept
 
                 if (!peImage)
                 {
-                    logger->error("Executable page of memory ({}, base {}) does not have associated PE file, is this "
+                    logger->error("[ContextScanner] Executable page of memory ({}, base {}) does not have associated PE file, is this "
                                   "JIT or manual map/shellcode?",
                                   addy, info.AllocationBase);
                     continue;
@@ -174,11 +174,11 @@ void pico::Engine::ContextScanner::Tick() noexcept
 
                 if (FAILED(wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(peImage), moduleName)))
                 {
-                    logger->error("Failed to get name of module {}!", reinterpret_cast<void*>(peImage));
+                    logger->error("[ContextScanner] Failed to get name of module {}!", reinterpret_cast<void*>(peImage));
                     continue;
                 }
 
-                logger->info("Found address {} from {} (base {}) on stack of thread!", addy,
+                logger->info("[ContextScanner] Found address {} from {} (base {}) on stack of thread!", addy,
                              shared::Util::ToUTF8(moduleName), reinterpret_cast<void*>(peImage));
             }
         }

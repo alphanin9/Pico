@@ -3,6 +3,7 @@
 #include <Engine/HandleSnap/HandleSnap.hpp>
 #include <Engine/IntegrityChecker/IntegrityChecker.hpp>
 #include <Engine/Logging/Logger.hpp>
+#include <Engine/ProcessSnap/ProcessSnap.hpp>
 #include <Engine/ThreadPool/ThreadPool.hpp>
 #include <Engine/WorkingSetScanner/WorkingSetScanner.hpp>
 
@@ -26,6 +27,7 @@ void pico::Engine::Engine::Tick() noexcept
     threadPool.Dispatch([]() { IntegrityChecker::Get().Tick(); });
     threadPool.Dispatch([]() { WorkingSetScanner::Get().Tick(); });
     threadPool.Dispatch([]() { HandleSnap::Get().Tick(); });
+    threadPool.Dispatch([]() { ProcessSnap::Get().Tick(); });
 
     static const auto s_isCS2 = Integration::IsCS2();
 
@@ -68,7 +70,7 @@ pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept
 
     if (m_threadsUnderHeavyLoad < 0)
     {
-        logger->critical("Engine::m_threadsUnderHeavyLoad is negative, this should NEVER happen!");
+        logger->critical("[Engine] Engine::m_threadsUnderHeavyLoad is negative, this should NEVER happen!");
     }
 
     // While this is not perfect at all, this check should help out with stutters a bit
@@ -90,16 +92,16 @@ pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept
 
         const auto duration = std::chrono::duration_cast<pico::Milliseconds>(Clock::now() - start).count();
 
-        logger->info("Time taken to wait: {}ms", duration);
+        logger->info("[Engine] Time taken to wait: {}ms", duration);
 
         if (duration > 20)
         {
-            logger->error("Unacceptable stutter from pool wait! This is a PROBLEM.");
+            logger->error("[Engine] Unacceptable stutter from pool wait! This is a PROBLEM.");
         }
 
         if (threadPool.m_pool.get_thread_count() != counter)
         {
-            logger->error("Not all threads responded to pool");
+            logger->error("[Engine] Not all threads responded to pool");
             return false;
         }
     }
@@ -139,39 +141,39 @@ void pico::Engine::Engine::Setup() noexcept
 
     auto& logger = Logger::GetLogSink();
 
-    logger->info("Pico engine preflight started");
+    logger->info("[Preflight] Pico engine preflight started");
 
     const auto secureBootConfig = shared::EnvironmentIntegrity::GetSecureBootConfig();
 
-    logger->info("Secure Boot config: can use: {}, is on: {}", secureBootConfig.m_secureBootSupported,
+    logger->info("[Preflight] Secure Boot config: can use: {}, is on: {}", secureBootConfig.m_secureBootSupported,
                  secureBootConfig.m_secureBootEnabled);
 
     if (!secureBootConfig.m_secureBootEnabled)
     {
         // Should notify user and not execute
-        logger->error("Secure Boot is NOT enabled");
+        logger->error("[Preflight] Secure Boot is NOT enabled");
     }
 
     // Note: add Measured Boot log dump here
 
     const auto codeIntegrityConfig = shared::EnvironmentIntegrity::GetCodeIntegrityConfig();
-    logger->info("CI config: enabled: {}, debug mode: {}, test signing: {}, HVCI: {}",
+    logger->info("[Preflight] CI config: enabled: {}, debug mode: {}, test signing: {}, HVCI: {}",
                  codeIntegrityConfig.m_codeIntegrity, codeIntegrityConfig.m_debugMode,
                  codeIntegrityConfig.m_testSigning, codeIntegrityConfig.m_hypervisorCodeIntegrity);
 
-    logger->info("Raw CI: {0:#b}", codeIntegrityConfig.m_raw);
+    logger->info("[Preflight] Raw CI: {0:#b}", codeIntegrityConfig.m_raw);
 
     if (!codeIntegrityConfig.m_codeIntegrity || codeIntegrityConfig.m_debugMode || codeIntegrityConfig.m_testSigning ||
         !codeIntegrityConfig.m_hypervisorCodeIntegrity)
     {
-        logger->error("System CI violation!");
+        logger->error("[Preflight] System CI violation!");
     }
 
     for (const auto& driver : shared::EnvironmentIntegrity::GetLoadedDriverPaths())
     {
         if (driver.m_fullPath.empty())
         {
-            logger->warn("Note: Driver {} full path is empty and thus not integrity checkable",
+            logger->warn("[Preflight] Note: Driver {} full path is empty and thus not integrity checkable",
                          shared::Util::ToUTF8(driver.m_rawPath));
             continue;
         }
@@ -179,7 +181,7 @@ void pico::Engine::Engine::Setup() noexcept
         if (!shared::EnvironmentIntegrity::VerifyFileTrust(driver.m_fullPath,
                                                            shared::EnvironmentIntegrity::EFileType::Driver))
         {
-            logger->error("Driver {} has a bad file signature!", shared::Util::ToUTF8(driver.m_rawPath));
+            logger->error("[Preflight] Driver {} has a bad file signature!", shared::Util::ToUTF8(driver.m_rawPath));
         }
     }
 

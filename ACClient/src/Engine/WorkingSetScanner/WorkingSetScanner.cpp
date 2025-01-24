@@ -28,7 +28,7 @@ void pico::Engine::WorkingSetScanner::Tick() noexcept
             std::chrono::duration_cast<pico::Milliseconds>(Clock::now() - start)
                 .count();
 
-        logger->info("Time to capture working set: {}ms", taken);
+        logger->info("[WorkingSetScanner] Time to capture working set: {}ms", taken);
         m_nextWorkingSetCacheUpdate = timestamp + WorkingSetUpdateTime;
 
         // Reset state
@@ -45,8 +45,6 @@ void pico::Engine::WorkingSetScanner::Tick() noexcept
 void pico::Engine::WorkingSetScanner::WalkWorkingSet() noexcept
 {
     auto& logger = Logger::GetLogSink();
-
-    const auto start = Clock::now();
 
     constexpr auto MaxVirtualQueryCallsPerPass = 15;
 
@@ -92,7 +90,7 @@ void pico::Engine::WorkingSetScanner::WalkWorkingSet() noexcept
         if (!shared::MemoryEnv::IsProtectionExecutable(pageInfo.Protect) ||
             !shared::MemoryEnv::IsProtectionExecutable(pageInfo.AllocationProtect))
         {
-            logger->warn("Execution status at page {} has been altered! Protection: {:#x}, alloc protect: {:#x}, "
+            logger->warn("[WorkingSetScanner] Execution status at page {} has been altered! Protection: {:#x}, alloc protect: {:#x}, "
                          "page type: {:#x}, base address: {}, size: {:#x}",
                          pageAddr, pageInfo.Protect, pageInfo.AllocationProtect, pageInfo.Type, pageInfo.BaseAddress,
                          pageInfo.RegionSize);
@@ -100,7 +98,7 @@ void pico::Engine::WorkingSetScanner::WalkWorkingSet() noexcept
 
         if (pageInfo.Type != MEM_IMAGE && pageInfo.RegionSize >= MaxExecutableAllocationSize)
         {
-            logger->error("Executable addr {} is not image and is big! Protection: {:#x}, alloc protect: {:#x}, page "
+            logger->error("[WorkingSetScanner] Executable addr {} is not image and is big! Protection: {:#x}, alloc protect: {:#x}, page "
                           "type: {:#x}, "
                           "size: {:#x}, base address: {}, state: {:#x}",
                           pageAddr, pageInfo.Protect, pageInfo.AllocationProtect, pageInfo.Type, pageInfo.RegionSize,
@@ -109,12 +107,6 @@ void pico::Engine::WorkingSetScanner::WalkWorkingSet() noexcept
     }
 
     m_doneWithScan = true;
-
-    const auto taken =
-        std::chrono::duration_cast<pico::Milliseconds>(Clock::now() - start)
-            .count();
-
-    logger->info("Time to walk working set: {}ms", taken);
 }
 
 pico::Engine::WorkingSetScanner& pico::Engine::WorkingSetScanner::Get() noexcept

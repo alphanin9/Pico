@@ -115,19 +115,19 @@ void pico::Engine::ModuleData::DumpModuleInfo() noexcept
 {
     auto& logger = Logger::GetLogSink();
 
-    logger->info("Start of module data dump...");
-    logger->info("Module path: {}", shared::Util::ToUTF8(m_path));
-    logger->info("Size of module: {}", m_rawSize);
-    logger->info("Size of mapped module: {}", m_modulePeFileData.size());
-    logger->info("Size of PE headers: {}", m_sizeOfHeaders);
-    logger->info("Relocation count: {}", m_relocations.size());
-    logger->info("Function entry count: {}", m_functionEntries.size());
-    logger->info("Has large RWX sections: {}, is small for integrity: {}", shared::PE::HasLargeRWXSections(m_image),
+    logger->info("[IntegrityChecker] Module data dump...");
+    logger->info("[IntegrityChecker] Module path: {}", shared::Util::ToUTF8(m_path));
+    logger->info("[IntegrityChecker] Size of module: {}", m_rawSize);
+    logger->info("[IntegrityChecker] Size of mapped module: {}", m_modulePeFileData.size());
+    logger->info("[IntegrityChecker] Size of PE headers: {}", m_sizeOfHeaders);
+    logger->info("[IntegrityChecker] Relocation count: {}", m_relocations.size());
+    logger->info("[IntegrityChecker] Function entry count: {}", m_functionEntries.size());
+    logger->info("[IntegrityChecker] Has large RWX sections: {}, is small for integrity: {}", shared::PE::HasLargeRWXSections(m_image),
                  shared::PE::IsIntegrityCheckableImageSizeSmall(m_image));
 
-    logger->info("Raw SHA256: {}", m_sha256);
-    logger->info("Is trusted by WinVerifyTrust: {}", m_isTrusted);
-    logger->info("End of module data dump...");
+    logger->info("[IntegrityChecker] Raw SHA256: {}", m_sha256);
+    logger->info("[IntegrityChecker] Is trusted by WinVerifyTrust: {}", m_isTrusted);
+    logger->info("[IntegrityChecker] End of module data dump...");
 }
 
 pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& aModule,
@@ -140,19 +140,19 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
     // We do not need to do the same check for on-disk image, ModuleData::Load() already does it
     if (!aImage)
     {
-        logger->error("Module in memory did not have valid PE!");
+        logger->error("[IntegrityChecker] Module in memory did not have valid PE!");
         return false;
     }
 
     // We should dump such images
     if (shared::PE::HasLargeRWXSections(aModule.m_image))
     {
-        logger->warn("Image has large RWX sections! This is potentially a sign of cheating.");
+        logger->warn("[IntegrityChecker] Image has large RWX sections! This is potentially a sign of cheating.");
     }
 
     if (shared::PE::IsIntegrityCheckableImageSizeSmall(aModule.m_image))
     {
-        logger->warn("Image has not much read-only to check!");
+        logger->warn("[IntegrityChecker] Image has not much read-only to check!");
     }
 
     // Check PE structure
@@ -171,7 +171,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
 
         if (diskByte != memByte)
         {
-            logger->error("[Headers] Bytes at RVA {:#x} ({} {}) differ! {:x} != {:x}", i,
+            logger->error("[IntegrityChecker] [Headers] Bytes at RVA {:#x} ({} {}) differ! {:x} != {:x}", i,
                           aModule.m_image->raw_to_ptr<void>(i), aImage->raw_to_ptr<void>(i), diskByte, memByte);
             peHeadersEqual = false;
         }
@@ -181,7 +181,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
 
     if (!peHeadersEqual)
     {
-        logger->warn("PE headers differ between disk and image!");
+        logger->warn("[IntegrityChecker] PE headers differ between disk and image!");
     }
 
     auto success = true;
@@ -189,7 +189,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
     if (aModule.m_functionEntries.empty())
     {
         // TODO: fallback to plain iterating RO sections
-        logger->error("Binary has no exception information! Should fall back here");
+        logger->error("[IntegrityChecker] Binary has no exception information! Should fall back here");
         return false;
     }
 
@@ -231,14 +231,14 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
                 {
                     if (s_engine.IsAddressInUs(addyToDetourTarget))
                     {
-                        logger->info("Found our detour at {}!", reinterpret_cast<void*>(addyToDetourTarget));
+                        logger->info("[IntegrityChecker] Found our detour at {}!", reinterpret_cast<void*>(addyToDetourTarget));
                     }
 
                     const auto pe = shared::PE::GetImagePtr(reinterpret_cast<void*>(addyToDetourTarget));
 
                     if (!pe)
                     {
-                        logger->error("Found detour pointing to address {}! No backing image.",
+                        logger->error("[IntegrityChecker] Found detour at RVA {:#x} pointing to address {}! No backing image.", i,
                                       reinterpret_cast<void*>(addyToDetourTarget));
                     }
                     else
@@ -246,7 +246,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
                         pico::UnicodeString imageName{};
                         wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(pe), imageName);
 
-                        logger->warn("Found detour at module {}, addr {}, RVA {:#x}", shared::Util::ToUTF8(imageName),
+                        logger->warn("[IntegrityChecker] Found detour for RVA {:#x} at module {}, addr {}, RVA {:#x}", i, shared::Util::ToUTF8(imageName),
                                      reinterpret_cast<void*>(addyToDetourTarget),
                                      addyToDetourTarget - reinterpret_cast<uintptr_t>(pe));
                     }
@@ -261,7 +261,6 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
                     i += instrSize;
                 }
 
-                // TODO: if it's a jump, follow jump chain
                 logger->error("Bytes at RVA {:#x} ({} {}) differ! {:x} != {:x}", i,
                               aModule.m_image->raw_to_ptr<void>(i), aImage->raw_to_ptr<void>(i), diskByte, memByte);
 
@@ -315,7 +314,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
 
             if (!VirtualQuery(memoryRelocPtr, &mbi, sizeof(mbi)))
             {
-                logger->info("Relocation {} (source {}, RVA {}) does not have a valid virtual addr!", memoryRelocPtr,
+                logger->info("[IntegrityChecker] Relocation {} (source {}, RVA {}) does not have a valid virtual addr!", memoryRelocPtr,
                              reinterpret_cast<void*>(memoryReloc), reloc);
                 continue;
             }
@@ -323,12 +322,12 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
             if (!shared::MemoryEnv::IsProtectionExecutable(mbi.Protect) &&
                 !shared::MemoryEnv::IsProtectionExecutable(mbi.AllocationProtect))
             {
-                logger->info("Relocation {} (source {}, RVA {}) does not point to executable memory!", memoryRelocPtr,
+                logger->info("[IntegrityChecker] Relocation {} (source {}, RVA {}) does not point to executable memory!", memoryRelocPtr,
                              reinterpret_cast<void*>(memoryReloc), reloc);
                 continue;
             }
 
-            logger->info("Relocation {} (source {}, RVA {}) points outside of an image! This is unlikely to be right.",
+            logger->info("[IntegrityChecker] Relocation {} (source {}, RVA {}) points outside of an image! This is unlikely to be right.",
                          memoryRelocPtr, reinterpret_cast<void*>(memoryReloc), reloc);
 
             continue;
@@ -341,7 +340,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
             pico::UnicodeString imageName{};
             wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(pe), imageName);
 
-            logger->info("Relocation {} (source {}, RVA {}) points to module {} instead of correct module!",
+            logger->info("[IntegrityChecker] Relocation {} (source {}, RVA {}) points to module {} instead of correct module!",
                          memoryRelocPtr, reinterpret_cast<void*>(memoryReloc), reloc, shared::Util::ToUTF8(imageName));
         }
 

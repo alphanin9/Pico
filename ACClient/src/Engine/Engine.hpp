@@ -37,7 +37,7 @@ struct Engine : shared::Util::NonCopyableOrMovable
      * \brief Get various information about the system that will not change during execution.
      * (example: Secure Boot state, code integrity state...). In addition, set up various
      * important variables.
-     * 
+     *
      * In a production environment, if checks here report bad data, the application should not launch.
      * Most of these checks should not be inside of the client, but inside of the launcher
      * or be done driver-side.
@@ -58,7 +58,7 @@ struct Engine : shared::Util::NonCopyableOrMovable
 
     /**
      * \brief Tick jobs that should be done on the main thread.
-     * 
+     *
      * Example: thread pool checks,
      * maybe some things related to thread context checking to catch stray RIP,
      * maybe setting instrumentation callback...
@@ -67,16 +67,16 @@ struct Engine : shared::Util::NonCopyableOrMovable
 
     /**
      * \brief Checks if the thread pool has been tampered with.
-     * 
+     *
      * Checks if jobs execute fine and can be waited for, as well as checking for thread suspensions.
-     * 
+     *
      * \return Whether or not the pool has issues.
      */
     pico::Bool IsThreadPoolOK() noexcept;
 
     /**
      * \brief Checks if an address belongs to our module. This should be inlined.
-     * 
+     *
      * \param aAddy The checked address.
      * \return True if the address is within our module.
      */
@@ -95,14 +95,17 @@ struct Engine : shared::Util::NonCopyableOrMovable
 
 /**
  * \brief A helper structure to manage Engine::m_threadsUnderHeavyLoad.
- * 
+ *
  * When constructed, increments Engine::m_threadsUnderHeavyLoad by one.
- * 
+ *
  * When destructed, decrements Engine::m_threadsUnderHeavyLoad by one.
+ *
+ * Note: consider making this take some description as a template parameter for profiling, then log the held time in
+ * dtor
  */
 struct EngineThreadLoadGuard : shared::Util::NonCopyable
 {
     EngineThreadLoadGuard() noexcept;
     ~EngineThreadLoadGuard() noexcept;
 };
-}
+} // namespace pico::Engine

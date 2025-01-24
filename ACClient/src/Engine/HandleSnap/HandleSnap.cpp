@@ -25,7 +25,7 @@ void pico::Engine::HandleSnap::Tick() noexcept
 
         const auto duration = std::chrono::duration_cast<pico::Milliseconds>(Clock::now() - start).count();
 
-        Logger::GetLogSink()->info("Time taken to cache handle table: {}ms", duration);
+        Logger::GetLogSink()->info("[HandleSnap] Time taken to cache handle table: {}ms", duration);
     }
 
     if (m_isDone)
@@ -117,7 +117,7 @@ void pico::Engine::HandleSnap::OnProcessHandleCheck(const Windows::SYSTEM_HANDLE
     if (!NT_SUCCESS(Windows::NtDuplicateObject(aOwner.get(), aEntry.HandleValue, s_currentProcess,
                                                *dupHandle.addressof(), PROCESS_QUERY_LIMITED_INFORMATION, 0u, 0u)))
     {
-        logger->warn("Failed to duplicate process handle from PID {}", pid);
+        logger->warn("[HandleSnap] Failed to duplicate process handle from PID {}", pid);
         return;
     }
 
@@ -128,7 +128,7 @@ void pico::Engine::HandleSnap::OnProcessHandleCheck(const Windows::SYSTEM_HANDLE
         pico::UnicodeString procName{};
         wil::QueryFullProcessImageNameW(aOwner.get(), 0u, procName);
 
-        logger->warn("Process {} (PID {}) has a potentially dangerous process handle ({}, access: {}) open to us!",
+        logger->warn("[HandleSnap] Process {} (PID {}) has a potentially dangerous process handle ({}, access: {}) open to us!",
                      shared::Util::ToUTF8(procName), pid, aEntry.HandleValue, aEntry.GrantedAccess);
     }
 }
@@ -156,7 +156,7 @@ void pico::Engine::HandleSnap::OnThreadHandleCheck(const Windows::SYSTEM_HANDLE_
     if (!NT_SUCCESS(Windows::NtDuplicateObject(aOwner.get(), aEntry.HandleValue, s_currentProcess,
                                                *dupHandle.addressof(), THREAD_QUERY_LIMITED_INFORMATION, 0u, 0u)))
     {
-        logger->warn("Failed to duplicate thread handle from PID {}", pid);
+        logger->warn("[HandleSnap] Failed to duplicate thread handle from PID {}", pid);
         return;
     }
 
@@ -167,7 +167,7 @@ void pico::Engine::HandleSnap::OnThreadHandleCheck(const Windows::SYSTEM_HANDLE_
         pico::UnicodeString procName{};
         wil::QueryFullProcessImageNameW(aOwner.get(), 0u, procName);
 
-        logger->warn("Process {} (PID {}) has a potentially dangerous thread handle ({}, access: {}) open to us!",
+        logger->warn("[HandleSnap] Process {} (PID {}) has a potentially dangerous thread handle ({}, access: {}) open to us!",
                      shared::Util::ToUTF8(procName), pid, aEntry.HandleValue, aEntry.GrantedAccess);
     }
 }
