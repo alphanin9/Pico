@@ -38,7 +38,7 @@ void pico::Engine::ProcessSnap::Tick() noexcept
 {
     const auto now = Clock::now();
 
-    if (now - m_lastProcessRefreshTime > ProcessCacheRefreshTime)
+    if ((now - m_lastProcessRefreshTime) > ProcessCacheRefreshTime)
     {
         m_lastProcessRefreshTime = now;
         m_isDone = false;

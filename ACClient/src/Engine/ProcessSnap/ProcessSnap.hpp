@@ -55,7 +55,7 @@ struct ProcessInformation
 struct ProcessSnap : public shared::Util::NonCopyableOrMovable
 {
     // How often the process cache should be refreshed.
-    static constexpr pico::Seconds ProcessCacheRefreshTime{5};
+    static constexpr pico::Seconds ProcessCacheRefreshTime{15};
 
     // The last time the process cache was refreshed.
     pico::Timestamp m_lastProcessRefreshTime{};

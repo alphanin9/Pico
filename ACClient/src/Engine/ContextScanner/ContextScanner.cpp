@@ -118,6 +118,7 @@ void pico::Engine::ContextScanner::Tick() noexcept
 
     auto& logger = Logger::GetLogSink();
 
+    if (m_scannedFrames.empty())
     {
         std::unique_lock lock(m_contextScannerMutex);
 
@@ -126,6 +127,8 @@ void pico::Engine::ContextScanner::Tick() noexcept
     }
 
     auto currentProcess = GetCurrentProcess();
+
+    // TODO: scan one frame per tick
 
     for (auto& frame : m_scannedFrames)
     {
@@ -183,6 +186,8 @@ void pico::Engine::ContextScanner::Tick() noexcept
             }
         }
     }
+
+    m_scannedFrames.clear();
 }
 
 void pico::Engine::ContextScanner::PushFrame(pico::SharedPtr<ContextFrame>& aFrame) noexcept

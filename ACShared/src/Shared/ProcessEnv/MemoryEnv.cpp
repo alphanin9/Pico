@@ -8,20 +8,15 @@ pico::Bool pico::shared::MemoryEnv::FillProcessWorkingSetBuffer(pico::Vector<pic
 
     // Resize the buffer to a minimum worthwhile size
     // If it's already in a good size, clear it
-    if (aBuffer.size() < MinimumBufferSize)
-    {
-        aBuffer.assign(MinimumBufferSize, {});
-    }
-    else
-    {
-        aBuffer.assign(aBuffer.size(), {});
-    }
-
-    static const auto s_currentProcess = GetCurrentProcess();
+    aBuffer.assign(std::max(aBuffer.size(), MinimumBufferSize), {});
 
     pico::Uint32 sizeWritten{};
 
-    auto status = Windows::NtQueryVirtualMemory(s_currentProcess, 0u, Windows::MemoryWorkingSetInformation,
+    // For some reason it fails when current process handle is static?
+    // I blame some sort of probing in kernel
+    const auto currentProcess = GetCurrentProcess();
+
+    auto status = Windows::NtQueryVirtualMemory(currentProcess, 0u, Windows::MemoryWorkingSetInformation,
                                                 aBuffer.data(), aBuffer.size(), sizeWritten);
 
     // Fun fact: this actually uses STATUS_ACCESS_VIOLATION for reporting the buffer is too small instead of
@@ -37,8 +32,7 @@ pico::Bool pico::shared::MemoryEnv::FillProcessWorkingSetBuffer(pico::Vector<pic
 
         aBuffer.assign(sizeNeeded, {});
 
-        status = Windows::NtQueryVirtualMemory(s_currentProcess, 0u, Windows::MemoryWorkingSetInformation,
-                                               aBuffer.data(),
+        status = Windows::NtQueryVirtualMemory(currentProcess, 0u, Windows::MemoryWorkingSetInformation, aBuffer.data(),
                                                aBuffer.size(), sizeWritten);
     }
 
