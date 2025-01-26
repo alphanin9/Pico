@@ -121,3 +121,12 @@ NTSTATUS __stdcall Windows::NtQueryObject(_In_ HANDLE aObjectHandle, Windows::OB
 
     return s_func(aObjectHandle, aObjectInfoClass, aObjectInfo, aObjectInfoSize, aSizeWritten);
 }
+
+NTSTATUS __stdcall Windows::NtSetInformationProcess(_In_ HANDLE aProcessHandle, Windows::PROCESSINFOCLASS aClass,
+                                                    _In_opt_ void* aProcInformation,
+                                                    pico::Uint32 aSizeOfProcInformation) noexcept
+{
+    static const auto s_func = LI_FN(NtSetInformationProcess).in(LI_MODULE("ntdll.dll").cached());
+
+    return s_func(aProcessHandle, aClass, aProcInformation, aSizeOfProcInformation);
+}

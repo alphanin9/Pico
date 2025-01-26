@@ -33,6 +33,11 @@ struct Logger : public shared::Util::NonCopyableOrMovable
     void DumpDataToFile(pico::StringView aFileNameTag, void* aDataStart, pico::Size aDataSize) noexcept;
 
     /**
+     * \brief Ticked in thread pool worker. Flushes the logs.
+     */
+    void Tick() noexcept;
+
+    /**
      * \brief Get a singleton instance of the logger.
      * \return A singleton instance of the logger.
      */

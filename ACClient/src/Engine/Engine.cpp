@@ -6,6 +6,7 @@
 #include <Engine/ProcessSnap/ProcessSnap.hpp>
 #include <Engine/ThreadPool/ThreadPool.hpp>
 #include <Engine/WorkingSetScanner/WorkingSetScanner.hpp>
+#include <Engine/WorkingSetWatch/WorkingSetWatch.hpp>
 
 #include <DevIntegration/Integration.hpp>
 
@@ -28,6 +29,8 @@ void pico::Engine::Engine::Tick() noexcept
     threadPool.Dispatch([]() { WorkingSetScanner::Get().Tick(); });
     threadPool.Dispatch([]() { HandleSnap::Get().Tick(); });
     threadPool.Dispatch([]() { ProcessSnap::Get().Tick(); });
+    threadPool.Dispatch([]() { WorkingSetWatcher::Get().Tick(); });
+    threadPool.Dispatch([]() { Logger::Get().Tick(); });
 
     static const auto s_isCS2 = Integration::IsCS2();
 
@@ -57,6 +60,8 @@ void pico::Engine::Engine::TickMainThreadJobs() noexcept
     {
         ContextScanner::Get().TickMainThread();
     }
+
+    WorkingSetWatcher::Get().TickMainThread();
 }
 
 pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept

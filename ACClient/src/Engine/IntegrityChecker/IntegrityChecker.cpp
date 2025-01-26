@@ -471,9 +471,21 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
         s_logger->info("Scanning module {} at base {}", shared::Util::ToUTF8(entry->BaseDllName.Buffer),
                        entry->DllBase);
 
-        // Note: add clause that disables engine wait here if the module is big enough! .text scanning is expensive,
-        // especially with our disassembler
-        const auto status = ScanModule(moduleEntry, shared::PE::GetImagePtr(entry->DllBase), false);
+
+        auto status = false;
+
+        // IDK about this
+        constexpr pico::Size BigFileSize = 0x1000000;
+
+        if (moduleEntry.m_modulePeFileData.size() > BigFileSize)
+        {
+            EngineThreadLoadGuard guard{};
+            status = ScanModule(moduleEntry, shared::PE::GetImagePtr(entry->DllBase), false);
+        }
+        else
+        {
+            status = ScanModule(moduleEntry, shared::PE::GetImagePtr(entry->DllBase), false);
+        }
 
         if (status)
         {

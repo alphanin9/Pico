@@ -20,7 +20,7 @@ pico::Engine::Logger::Logger() noexcept
     spdlog::register_logger(m_logger);
     spdlog::set_default_logger(m_logger);
 
-    m_logger->flush_on(spdlog::level::trace);
+    m_logger->flush_on(spdlog::level::err);
 }
 
 void pico::Engine::Logger::DumpDataToFile(pico::StringView aFileNameTag, void* aDataStart,
@@ -49,6 +49,11 @@ void pico::Engine::Logger::DumpDataToFile(pico::StringView aFileNameTag, void* a
 
     m_logger->info("[Logger] Wrote {} bytes to file {}", static_cast<pico::Int64>(file.tellp()), path);
     m_logger->info("[Logger] Wrote {} bytes to Base64 file {}", static_cast<pico::Int64>(base64File.tellp()), path);
+}
+
+void pico::Engine::Logger::Tick() noexcept
+{
+    m_logger->flush();
 }
 
 pico::Engine::Logger& pico::Engine::Logger::Get() noexcept

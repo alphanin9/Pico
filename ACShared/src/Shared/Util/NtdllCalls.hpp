@@ -36,11 +36,11 @@ NTSTATUS __stdcall NtFreeVirtualMemory(HANDLE aHandle, uintptr_t& aBaseAddress, 
 NTSTATUS __stdcall NtProtectVirtualMemory(HANDLE aHandle, uintptr_t& aBaseAddress, pico::Size& aSize,
                                           pico::Uint32 aNewProtection, pico::Uint32& aOldProtection) noexcept;
 
-NTSTATUS __stdcall NtCreateFile(_Out_ HANDLE& aFileHandle, ACCESS_MASK aDesiredAccess, _In_ Windows::OBJECT_ATTRIBUTES* aObjAttributes,
+NTSTATUS __stdcall NtCreateFile(_Out_ HANDLE& aFileHandle, ACCESS_MASK aDesiredAccess,
+                                _In_ Windows::OBJECT_ATTRIBUTES* aObjAttributes,
                                 _In_ Windows::IO_STATUS_BLOCK* aStatusBlock, Windows::LARGE_INTEGER* aAllocationSize,
                                 pico::Uint32 aAttributes, pico::Uint32 aFileShareMode, pico::Uint32 aCreateDisposition,
                                 pico::Uint32 aCreateOptions, void* aEaBuffer, pico::Uint32 aEaLength) noexcept;
-
 
 NTSTATUS __stdcall NtReadVirtualMemory(HANDLE aProcessHandle, uintptr_t aBaseAddress, _Out_ void* aBuffer,
                                        pico::Size aSize, pico::Size& aSizeRead) noexcept;
@@ -49,9 +49,14 @@ void __stdcall RtlInitUnicodeString(_Out_ Windows::UNICODE_STRING& aStr, _In_ co
 
 NTSTATUS __stdcall NtDuplicateObject(_In_ HANDLE aSourceProcHandle, _In_ HANDLE aSourceHandle,
                                      HANDLE aTargetProcessHandle, _Out_ HANDLE& aTargetHandle,
-                                     ACCESS_MASK aDesiredAccess, pico::Uint32 aHandleAttributes, pico::Uint32 aOptions) noexcept;
+                                     ACCESS_MASK aDesiredAccess, pico::Uint32 aHandleAttributes,
+                                     pico::Uint32 aOptions) noexcept;
 
 NTSTATUS __stdcall NtQueryObject(_In_ HANDLE aObjectHandle, Windows::OBJECT_INFORMATION_CLASS aObjectInfoClass,
                                  _Out_ void* aObjectInfo, pico::Uint32 aObjectInfoSize,
                                  pico::Uint32& aSizeWritten) noexcept;
-} // namespace Windows 
+
+NTSTATUS __stdcall NtSetInformationProcess(_In_ HANDLE aProcessHandle, Windows::PROCESSINFOCLASS aClass,
+                                           _In_opt_ void* aProcInformation,
+                                           pico::Uint32 aSizeOfProcInformation) noexcept;
+} // namespace Windows

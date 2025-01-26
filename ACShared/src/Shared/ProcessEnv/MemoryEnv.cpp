@@ -27,6 +27,12 @@ pico::Bool pico::shared::MemoryEnv::FillProcessWorkingSetBuffer(pico::Vector<pic
     {
         auto asWorkingSetInformation = reinterpret_cast<Windows::MEMORY_WORKING_SET_INFORMATION*>(&aBuffer[0]);
 
+        if (asWorkingSetInformation->NumberOfEntries == 0u)
+        {
+            // Just skip...
+            return false;
+        }
+
         auto sizeNeeded = (asWorkingSetInformation->NumberOfEntries * sizeof(Windows::MEMORY_WORKING_SET_BLOCK)) +
                           (sizeof(asWorkingSetInformation->NumberOfEntries));
 

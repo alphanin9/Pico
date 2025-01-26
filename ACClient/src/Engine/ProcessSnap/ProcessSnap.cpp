@@ -69,14 +69,14 @@ void pico::Engine::ProcessSnap::Tick() noexcept
         return;
     }
 
-    constexpr auto MaxProcessesPerTick = 16;
-    auto processesThisTick = 0;
+    constexpr auto MaxThreadsPerTick = 16;
+    auto threadsThisTick = 0;
 
     auto& logger = Logger::GetLogSink();
 
     for (; m_lastIndex < m_processInfo.size(); m_lastIndex++)
     {
-        if (processesThisTick > MaxProcessesPerTick)
+        if (threadsThisTick > MaxThreadsPerTick)
         {
             return;
         }
@@ -108,11 +108,11 @@ void pico::Engine::ProcessSnap::Tick() noexcept
             logger->info("[ProcessSnap] Thread TEB: {:#x}", i.m_tebAddr);
             logger->info("[ProcessSnap] Thread start addr: {:#x}, Win32 start addr: {:#x}", i.m_startAddress,
                          i.m_win32StartAddress);
+
+            threadsThisTick++;
         }
 
         logger->info("[ProcessSnap] ...");
-
-        processesThisTick++;
     }
 
     m_isDone = true;
