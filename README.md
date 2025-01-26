@@ -4,6 +4,7 @@ It turns out I have terribly poor ideas for thesis projects.
 
 ### Features
 
+- Utilized thread pool for spreading out work
 - Thread pool workers added in main thread, some things will run in main thread as well
 - Compatible with Counter-Strike 2 (should work both with Vulkan and DX11 render systems) and should be compatible (theoretically, as long as you update the function AOB signature or switch to a different address resolver method) with Rust
 - Currently bootstrapped by basic LoadLibrary injector along with a hook on the low latency sleep function of the respective games
@@ -11,7 +12,10 @@ It turns out I have terribly poor ideas for thesis projects.
     - An integrity checker based on analyzing exception directory functions and relocation checks
     - Integrity check will trace detour hooks to their destination using [Zydis](https://github.com/zyantific/zydis) as a disassembler, logging the destination memory location and module
     - Grabbing thread contexts every now and then and analyzing their stacks for executable memory addresses
-    - (Untested) Process working set checks to catch manually mapped modules
+    - Process working set checks to catch manually mapped modules
+    - Handle and process enumeration
+    - (CS2-specific) Walking the interface list in modules exporting `CreateInterface`
+    - (In progress, the current implementation lags) Process working set watch introspection
 - System integrity verification includes checking for Secure Boot, proper code integrity settings and checking for known bad certificate drivers via `WinVerifyTrust`
 - Prioritization for ease of integration and development
 - Not particularly tailored to any game for the sake of easy integration
@@ -22,14 +26,10 @@ It turns out I have terribly poor ideas for thesis projects.
 - Making fallbacks for the integrity check in case of exception information missing
 - IAT hook detection
 - Exception, thread creation, DLL loading, APC and system call instrumentation
-- Detections via [process working set watch](https://github.com/winsiderss/systeminformer/blob/9757c17ce71a7bf9b0564d4502d270806f08e0c8/phnt/include/ntpsapi.h#L532) thread ID + RIP (unsure about feasibility, best case - might work on external hacks too?)
-- Shadow VMT hook detection (probably CS2 only)
-- Performance optimization
+- Performance optimization, currently this may cause stuttering
 
 ### Planned features - external detection
 
-- Window enumeration
-- Handle enumeration
 - I don't believe there's much more to be done to deter external hacks from user mode save for making it a pain to actually do anything with the read memory (some simple and fast encryption of important values like view matrix, camera position and camera angles that changes the key every frame?), you'll need to bring a gun (kernel mode)
 
 ### Planned features - environment integrity
