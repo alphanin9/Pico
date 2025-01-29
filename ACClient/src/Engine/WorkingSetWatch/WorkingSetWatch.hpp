@@ -10,19 +10,13 @@ namespace pico::Engine
  */
 struct WorkingSetWatcher : public shared::Util::NonCopyableOrMovable
 {
+    static constexpr pico::Size BufferSize = 2048u;
+
     // Is this our first call?
     pico::AtomicBool m_initialized{};
-
-    // Lock this when accessing m_workingSetBuffer.
-    std::mutex m_workingSetWatchBufferLock{};
-
-    // The buffer to be filled.
-    pico::Vector<Windows::PROCESS_WS_WATCH_INFORMATION_EX> m_workingSetWatchBuffer{};
-
-    /**
-     * \brief Roll the process into working set watch and obtain new working set records. This might need to be moved off the main thread eventually.
-     */
-    void TickMainThread() noexcept;
+    
+    // The buffer to be filled. Size of 2048. 
+    std::array<Windows::PROCESS_WS_WATCH_INFORMATION_EX, BufferSize> m_workingSetWatchBuffer{};
 
     /**
      * \brief Tick component in thread pool worker.

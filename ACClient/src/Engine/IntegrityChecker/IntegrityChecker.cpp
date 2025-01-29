@@ -261,7 +261,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
                     i += instrSize;
                 }
 
-                logger->error("Bytes at RVA {:#x} ({} {}) differ! {:x} != {:x}", i,
+                logger->error("[IntegrityChecker] Bytes at RVA {:#x} ({} {}) differ! {:x} != {:x}", i,
                               aModule.m_image->raw_to_ptr<void>(i), aImage->raw_to_ptr<void>(i), diskByte, memByte);
 
                 success = false;
@@ -379,7 +379,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanClient() noexcept
         }
         else
         {
-            s_logger->error("Failed to refresh client module!");
+            s_logger->error("[IntegrityChecker] Failed to refresh client module!");
             return false;
         }
     }
@@ -410,7 +410,7 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
 
     if (!ScanClient())
     {
-        s_logger->error("Client failed integrity check!");
+        s_logger->error("[IntegrityChecker] Client failed integrity check!");
     }
 
     auto moduleScanned = false;
@@ -420,7 +420,7 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
         auto entry = loadedModules[i];
         if (shouldReport)
         {
-            s_logger->info("Module {} loaded, base address {}", shared::Util::ToUTF8(entry->FullDllName.Buffer),
+            s_logger->info("[IntegrityChecker] Module {} loaded, base address {}", shared::Util::ToUTF8(entry->FullDllName.Buffer),
                            entry->DllBase);
         }
 
@@ -458,7 +458,7 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
 
         if (!moduleEntry.Load(entry->FullDllName.Buffer))
         {
-            s_logger->error("Failed to load module entry for {}, base address {}!",
+            s_logger->error("[IntegrityChecker] Failed to load module entry for {}, base address {}!",
                             shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
             continue;
         }
@@ -468,7 +468,7 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
         // We should not have too many consecutive integrity checks
         moduleEntry.m_lastIntegrityCheckTime = timestamp + pico::Seconds(i);
 
-        s_logger->info("Scanning module {} at base {}", shared::Util::ToUTF8(entry->BaseDllName.Buffer),
+        s_logger->info("[IntegrityChecker] Scanning module {} at base {}", shared::Util::ToUTF8(entry->BaseDllName.Buffer),
                        entry->DllBase);
 
 
@@ -489,12 +489,12 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
 
         if (status)
         {
-            s_logger->info("Module {} at base {} passed its integrity check!",
+            s_logger->info("[IntegrityChecker] Module {} at base {} passed its integrity check!",
                            shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
         }
         else
         {
-            s_logger->error("Module {} at base {} failed its integrity check!",
+            s_logger->error("[IntegrityChecker] Module {} at base {} failed its integrity check!",
                             shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
         }
 

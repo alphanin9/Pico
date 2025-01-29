@@ -28,7 +28,7 @@ void pico::Engine::Engine::Tick() noexcept
     threadPool.Dispatch([]() { IntegrityChecker::Get().Tick(); });
     threadPool.Dispatch([]() { WorkingSetScanner::Get().Tick(); });
     threadPool.Dispatch([]() { HandleSnap::Get().Tick(); });
-    threadPool.Dispatch([]() { ProcessSnap::Get().Tick(); });
+    //threadPool.Dispatch([]() { ProcessSnap::Get().Tick(); });
     threadPool.Dispatch([]() { WorkingSetWatcher::Get().Tick(); });
     threadPool.Dispatch([]() { Logger::Get().Tick(); });
 
@@ -53,15 +53,13 @@ void pico::Engine::Engine::TickMainThreadJobs() noexcept
     if ((timestampCounter % ThreadPoolCheck) == 0 && !IsThreadPoolOK())
     {
         // In production we should report the issue and crash
-        logger.m_logger->error("Thread pool had issues!");
+        logger.m_logger->error("[Engine] Thread pool had issues!");
     }
 
     if ((timestampCounter % ThreadCtxCheck) == 0)
     {
         ContextScanner::Get().TickMainThread();
     }
-
-    WorkingSetWatcher::Get().TickMainThread();
 }
 
 pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept
@@ -120,14 +118,14 @@ pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept
         if (!NT_SUCCESS(Windows::NtQueryInformationThread(i, Windows::THREADINFOCLASS::ThreadSystemThreadInformation,
                                                           &threadInfo, sizeof(threadInfo), sizeWritten)))
         {
-            logger->error("Failed to call NtQueryInformationThread!");
+            logger->error("[Engine] Failed to call NtQueryInformationThread!");
             return false;
         }
 
         if (threadInfo.WaitReason == Windows::KWAIT_REASON::Suspended ||
             threadInfo.WaitReason == Windows::KWAIT_REASON::WrSuspended)
         {
-            logger->error("Found suspended thread in thread pool!");
+            logger->error("[Engine] Found suspended thread in thread pool!");
             return false;
         }
     }
@@ -204,7 +202,7 @@ void pico::Engine::Engine::SetupModuleData() noexcept
 
     if (!peHeader)
     {
-        logger->error("Failed to set up module data, module base was not valid PE!");
+        logger->error("[Engine] Failed to set up module data, module base was not valid PE!");
         return;
     }
 
@@ -217,7 +215,7 @@ void pico::Engine::Engine::SetupModuleData() noexcept
     if (!NT_SUCCESS(Windows::NtQuerySystemInformation(Windows::SYSTEM_INFORMATION_CLASS::SystemBasicInformation,
                                                       &basicInfo, sizeof(basicInfo), sizeWritten)))
     {
-        logger->error("NtQuerySystemInformation(SystemBasicInformation, ...) failed");
+        logger->error("[Engine] NtQuerySystemInformation(SystemBasicInformation, ...) failed");
         return;
     }
 

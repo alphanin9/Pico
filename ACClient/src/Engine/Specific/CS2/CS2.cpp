@@ -114,7 +114,7 @@ void pico::Engine::Specific::CS2::WalkInterfaces() noexcept
                 // Interface vtable is out of bounds? That's certainly not what legitimate software would do.
                 if (interfaceVtable < imageMin || interfaceVtable > imageMax)
                 {
-                    logger->error("Vtable of interface {} at {} appears to be hooked!", entry->m_interfaceName,
+                    logger->error("[CS2] Vtable of interface {} at {} appears to be hooked!", entry->m_interfaceName,
                                   interfaceVtable);
                 }
             }
