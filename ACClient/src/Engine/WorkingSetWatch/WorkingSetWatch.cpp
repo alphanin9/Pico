@@ -33,6 +33,9 @@ void pico::Engine::WorkingSetWatcher::Tick() noexcept
         return;
     }
 
+    // This should always be the correct number
+    const auto faultCount = (sizeWritten / sizeof(Windows::PROCESS_WS_WATCH_INFORMATION_EX)) - 1u;
+
     // Note: look into making this a func...
     static const auto s_procId = static_cast<pico::Uint32>(shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
 
@@ -40,16 +43,10 @@ void pico::Engine::WorkingSetWatcher::Tick() noexcept
 
     auto pageFaultsWalked = 0;
 
-    // Note: currently this only detects external to process threads
-    for (auto& entry : m_workingSetWatchBuffer)
+    for (auto i = 0u; i < faultCount; i++)
     {
-        // We found the end of the list, quit out of the loop
-        if (entry.FaultingPc == nullptr)
-        {
-            break;
-        }
-
         pageFaultsWalked++;
+        auto& entry = m_workingSetWatchBuffer[i];
 
         // Open a handle to the faulting thread
         wil::unique_handle threadHandle{OpenThread(THREAD_QUERY_LIMITED_INFORMATION, false, entry.FaultingThreadId)};
@@ -57,6 +54,8 @@ void pico::Engine::WorkingSetWatcher::Tick() noexcept
         if (!threadHandle)
         {
             // Fine, guess it's not OK
+            logger->warn("[WorkingSetWatch] Failed to open handle to TID {} faulting at {} with RIP {}!",
+                         entry.FaultingThreadId, entry.FaultingVa, entry.FaultingPc);
             continue;
         }
 
@@ -75,15 +74,16 @@ void pico::Engine::WorkingSetWatcher::Tick() noexcept
             // OK, this is weird...
             if (!image)
             {
-                logger->warn("[WorkingSetWatch] Thread {} had bad RIP {} cause a page fault at addr {}", entry.FaultingThreadId,
-                             entry.FaultingPc, entry.FaultingVa);
+                logger->warn("[WorkingSetWatch] Thread {} had bad RIP {} cause a page fault at addr {}",
+                             entry.FaultingThreadId, entry.FaultingPc, entry.FaultingVa);
             }
         }
     }
 
     const auto timeTaken = std::chrono::duration_cast<pico::Milliseconds>(Clock::now() - start).count();
 
-    logger->info("[WorkingSetWatch] Time taken to walk page faults: {}ms, faults walked: {}", timeTaken, pageFaultsWalked);
+    logger->info("[WorkingSetWatch] Time taken to walk page faults: {}ms, faults walked: {}, fault cnt: {}", timeTaken,
+                 pageFaultsWalked, faultCount);
 }
 
 pico::Engine::WorkingSetWatcher& pico::Engine::WorkingSetWatcher::Get() noexcept
