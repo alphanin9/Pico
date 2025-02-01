@@ -4,9 +4,9 @@
 namespace pico::Engine
 {
 /**
- * \brief Utilizes Windows's working set watch capabilities to look for page faults caused by invalid or process-external thread IDs.
+ * \brief Utilizes Windows's working set watch capabilities to look for page faults caused by invalid instruction pointers.
  * 
- * Note: currently I don't know if this works on page faults caused by other processes - according to static analysis of KiPageFault, it should.
+ * Can be improved by a kernel driver directly accessing page fault history without filtering out kernel mode addresses.
  */
 struct WorkingSetWatcher : public shared::Util::NonCopyableOrMovable
 {

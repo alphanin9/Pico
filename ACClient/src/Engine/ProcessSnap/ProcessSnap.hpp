@@ -3,9 +3,10 @@
 
 namespace pico::Engine
 {
-
 /**
  * \brief A more lightweight wrapper over Windows::SYSTEM_EXTENDED_THREAD_INFORMATION, containing things we need.
+ * 
+ * This is currently not displayed in the logs due to performance concerns.
  * 
  * Note that some things may be zero.
  */
@@ -35,8 +36,12 @@ struct ProcessInformation
 {
     pico::Uint32 m_processId{};
     pico::Uint32 m_sessionId{};
+    // Note: this is only the image name itself, not the whole path!
     pico::UnicodeString m_imageName{};
-    pico::Uint64 m_imageNameHash{}; // Note: this is a hash of the whole image name! Fix this later.
+    pico::Uint64 m_imageNameHash{}; 
+
+    pico::UnicodeString m_imagePath{};
+
     pico::Vector<ThreadInformation> m_threads{};
 
     ProcessInformation(Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION* aProc,

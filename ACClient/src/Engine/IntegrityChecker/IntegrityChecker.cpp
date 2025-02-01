@@ -193,10 +193,28 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
         return false;
     }
 
+    auto funcCoverage = 0u;
+    auto partialCoverage = 0u;
+
     // This is not perfectly optimal
     for (auto [startRva, endRva] : aModule.m_functionEntries)
     {
-        for (pico::Size i = startRva; i <= endRva; i++)
+        funcCoverage++;
+
+        // Tiny optimization, most functions will be scanned with surface scan, still OK for catching detours at start - which is what matters for most stuff
+        constexpr auto MinimalScannedAmount = 16u;
+        constexpr auto RandomConstant = 0x3C;
+
+        auto endpoint = endRva;
+
+        // Do NOT apply this to the client module ever!
+        if (__rdtsc() % RandomConstant != 0u && !aIsClientModule)
+        {
+            partialCoverage++;
+            endpoint = std::min(endRva, startRva + MinimalScannedAmount);
+        }
+
+        for (pico::Size i = startRva; i <= endpoint; i++)
         {
             auto diskByte = *aModule.m_image->raw_to_ptr<pico::Uint8>(i);
             auto memByte = *aImage->raw_to_ptr<pico::Uint8>(i);
@@ -346,9 +364,11 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
 
         if (aIsClientModule && !success)
         {
-            return false;
+            break;
         }
     }
+
+    logger->info("[IntegrityChecker] Metrics: scanned funcs {}, surface skimmed: {}", funcCoverage, partialCoverage);
 
     return success;
 }
@@ -392,7 +412,7 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
     constexpr pico::Seconds LoadedModuleListReportInterval{60};
     constexpr pico::Seconds ModuleIntegrityCheckInterval{20};
 
-    auto& s_logger = Logger::GetLogSink();
+    auto& logger = Logger::GetLogSink();
     static const auto& s_engine = Engine::Get();
 
     const auto timestamp = Clock::now();
@@ -410,7 +430,7 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
 
     if (!ScanClient())
     {
-        s_logger->error("[IntegrityChecker] Client failed integrity check!");
+        logger->error("[IntegrityChecker] Client failed integrity check!");
     }
 
     auto moduleScanned = false;
@@ -420,7 +440,8 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
         auto entry = loadedModules[i];
         if (shouldReport)
         {
-            s_logger->info("[IntegrityChecker] Module {} loaded, base address {}", shared::Util::ToUTF8(entry->FullDllName.Buffer),
+            logger->info("[IntegrityChecker] Module {} loaded, base address {}",
+                         shared::Util::ToUTF8(entry->FullDllName.Buffer),
                            entry->DllBase);
         }
 
@@ -458,7 +479,7 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
 
         if (!moduleEntry.Load(entry->FullDllName.Buffer))
         {
-            s_logger->error("[IntegrityChecker] Failed to load module entry for {}, base address {}!",
+            logger->error("[IntegrityChecker] Failed to load module entry for {}, base address {}!",
                             shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
             continue;
         }
@@ -468,7 +489,8 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
         // We should not have too many consecutive integrity checks
         moduleEntry.m_lastIntegrityCheckTime = timestamp + pico::Seconds(i);
 
-        s_logger->info("[IntegrityChecker] Scanning module {} at base {}", shared::Util::ToUTF8(entry->BaseDllName.Buffer),
+        logger->info("[IntegrityChecker] Scanning module {} at base {}",
+                     shared::Util::ToUTF8(entry->BaseDllName.Buffer),
                        entry->DllBase);
 
 
@@ -489,12 +511,12 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
 
         if (status)
         {
-            s_logger->info("[IntegrityChecker] Module {} at base {} passed its integrity check!",
+            logger->info("[IntegrityChecker] Module {} at base {} passed its integrity check!",
                            shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
         }
         else
         {
-            s_logger->error("[IntegrityChecker] Module {} at base {} failed its integrity check!",
+            logger->error("[IntegrityChecker] Module {} at base {} failed its integrity check!",
                             shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
         }
 

@@ -26,6 +26,13 @@ pico::Engine::ProcessInformation::ProcessInformation(
         m_imageNameHash = shared::FNV1a64WideCharString(aProc->ImageName.Buffer);
     }
 
+    wil::unique_handle handle{OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, m_processId)};
+
+    if (handle)
+    {
+        wil::QueryFullProcessImageNameW(handle.get(), 0u, m_imagePath);
+    }
+
     m_threads.reserve(aThreads.size());
 
     for (auto thread : aThreads)
@@ -69,14 +76,14 @@ void pico::Engine::ProcessSnap::Tick() noexcept
         return;
     }
 
-    constexpr auto MaxThreadsPerTick = 16;
-    auto threadsThisTick = 0;
+    constexpr auto MaxProcsPerTick = 16;
+    auto procsThisTick = 0;
 
     auto& logger = Logger::GetLogSink();
 
     for (; m_lastIndex < m_processInfo.size(); m_lastIndex++)
     {
-        if (threadsThisTick > MaxThreadsPerTick)
+        if (procsThisTick > MaxProcsPerTick)
         {
             return;
         }
@@ -84,35 +91,11 @@ void pico::Engine::ProcessSnap::Tick() noexcept
         // Note: we can look over the current process's threads here too!
 
         auto& proc = m_processInfo[m_lastIndex];
-        logger->info("[ProcessSnap] ...");
-        logger->info("[ProcessSnap] Process {} in session {}, thread count: {}", proc.m_processId, proc.m_sessionId,
-                     proc.m_threads.size());
+        logger->info("[ProcessSnap] Process {} (\"{}\" @ \"{}\", {}) in session {}, thread count: {}", proc.m_processId,
+                     shared::Util::ToUTF8(proc.m_imageName), shared::Util::ToUTF8(proc.m_imagePath),
+                     proc.m_imageNameHash, proc.m_sessionId, proc.m_threads.size());
 
-        if (!proc.m_imageName.empty())
-        {
-            logger->info("[ProcessSnap] Process name: {}, hash: {:#x}", shared::Util::ToUTF8(proc.m_imageName),
-                         proc.m_imageNameHash);
-        }
-        else
-        {
-            logger->info("[ProcessSnap] No process name!");
-        }
-
-        for (auto& i : proc.m_threads)
-        {
-            logger->info("[ProcessSnap] Thread {}", i.m_threadId);
-            logger->info("[ProcessSnap] Thread state: {}, wait reason: {}", static_cast<pico::Uint32>(i.m_threadState),
-                         static_cast<pico::Uint32>(i.m_waitReason));
-
-            logger->info("[ProcessSnap] Thread user time: {}, kernel time: {}", i.m_userTime, i.m_kernelTime);
-            logger->info("[ProcessSnap] Thread TEB: {:#x}", i.m_tebAddr);
-            logger->info("[ProcessSnap] Thread start addr: {:#x}, Win32 start addr: {:#x}", i.m_startAddress,
-                         i.m_win32StartAddress);
-
-            threadsThisTick++;
-        }
-
-        logger->info("[ProcessSnap] ...");
+        procsThisTick++;
     }
 
     m_isDone = true;

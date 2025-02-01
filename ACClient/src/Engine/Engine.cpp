@@ -28,7 +28,7 @@ void pico::Engine::Engine::Tick() noexcept
     threadPool.Dispatch([]() { IntegrityChecker::Get().Tick(); });
     threadPool.Dispatch([]() { WorkingSetScanner::Get().Tick(); });
     threadPool.Dispatch([]() { HandleSnap::Get().Tick(); });
-    //threadPool.Dispatch([]() { ProcessSnap::Get().Tick(); });
+    threadPool.Dispatch([]() { ProcessSnap::Get().Tick(); });
     threadPool.Dispatch([]() { WorkingSetWatcher::Get().Tick(); });
     threadPool.Dispatch([]() { Logger::Get().Tick(); });
 
@@ -48,12 +48,12 @@ void pico::Engine::Engine::TickMainThreadJobs() noexcept
 
     const auto timestampCounter = __rdtsc();
 
-    auto& logger = Logger::Get();
+    auto& logger = Logger::GetLogSink();
 
     if ((timestampCounter % ThreadPoolCheck) == 0 && !IsThreadPoolOK())
     {
         // In production we should report the issue and crash
-        logger.m_logger->error("[Engine] Thread pool had issues!");
+        logger->error("[Engine] Thread pool had issues!");
     }
 
     if ((timestampCounter % ThreadCtxCheck) == 0)

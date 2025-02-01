@@ -1,5 +1,5 @@
-#include <Engine/WorkingSetWatch/WorkingSetWatch.hpp>
 #include <Engine/Logging/Logger.hpp>
+#include <Engine/WorkingSetWatch/WorkingSetWatch.hpp>
 
 void pico::Engine::WorkingSetWatcher::Tick() noexcept
 {
@@ -16,9 +16,9 @@ void pico::Engine::WorkingSetWatcher::Tick() noexcept
     pico::Uint32 sizeWritten{};
 
     // Note: we don't have to reset the buffer or anything beforehand, the function will give us endpoint anyway
-    const auto status =
-        Windows::NtQueryInformationProcess(GetCurrentProcess(), Windows::PROCESSINFOCLASS::ProcessWorkingSetWatchEx,
-                                           m_workingSetWatchBuffer.data(), m_workingSetWatchBuffer.size() * sizeof(m_workingSetWatchBuffer[0]), sizeWritten);
+    const auto status = Windows::NtQueryInformationProcess(
+        GetCurrentProcess(), Windows::PROCESSINFOCLASS::ProcessWorkingSetWatchEx, m_workingSetWatchBuffer.data(),
+        m_workingSetWatchBuffer.size() * sizeof(m_workingSetWatchBuffer[0]), sizeWritten);
 
     // Special case, means we don't have more PFs yet
     if (status == STATUS_NO_MORE_ENTRIES)
@@ -29,61 +29,40 @@ void pico::Engine::WorkingSetWatcher::Tick() noexcept
     // WTF? This should be limited to 2048 in kernel
     if (status == STATUS_BUFFER_TOO_SMALL || (!NT_SUCCESS(status)))
     {
-        Logger::GetLogSink()->error("[WorkingSetWatch] PROCESSINFOCLASS::ProcessWorkingSetWatchEx call failed! Error reason: {:#x}", static_cast<pico::Uint32>(status));
+        Logger::GetLogSink()->error(
+            "[WorkingSetWatch] PROCESSINFOCLASS::ProcessWorkingSetWatchEx call failed! Error reason: {:#x}",
+            static_cast<pico::Uint32>(status));
         return;
     }
 
     // This should always be the correct number
     const auto faultCount = (sizeWritten / sizeof(Windows::PROCESS_WS_WATCH_INFORMATION_EX)) - 1u;
 
-    // Note: look into making this a func...
-    static const auto s_procId = static_cast<pico::Uint32>(shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
-
     auto& logger = Logger::GetLogSink();
 
     auto pageFaultsWalked = 0;
 
+    // A note: the old thread check was pointless, as nt!PspQueryWorkingSetWatch will filter out any page faults with
+    // kernel mode addresses - and RPM/WPM will incur page faults in kernel mode for obvious reasons
     for (auto i = 0u; i < faultCount; i++)
     {
         pageFaultsWalked++;
         auto& entry = m_workingSetWatchBuffer[i];
 
-        // Open a handle to the faulting thread
-        wil::unique_handle threadHandle{OpenThread(THREAD_QUERY_LIMITED_INFORMATION, false, entry.FaultingThreadId)};
+        void* image{};
+        RtlPcToFileHeader(entry.FaultingPc, reinterpret_cast<PVOID*>(&image));
 
-        if (!threadHandle)
+        // OK, this is weird...
+        if (!image)
         {
-            // Fine, guess it's not OK
-            logger->warn("[WorkingSetWatch] Failed to open handle to TID {} faulting at {} with RIP {}!",
-                         entry.FaultingThreadId, entry.FaultingVa, entry.FaultingPc);
-            continue;
-        }
-
-        const auto pid = GetProcessIdOfThread(threadHandle.get());
-
-        if (pid != s_procId)
-        {
-            logger->warn("[WorkingSetWatch] Thread {} of process {} caused a page fault in us with RIP {} at addr {}",
-                         entry.FaultingThreadId, pid, entry.FaultingPc, entry.FaultingVa);
-        }
-        else
-        {
-            void* image{};
-            RtlPcToFileHeader(entry.FaultingPc, reinterpret_cast<PVOID*>(&image));
-
-            // OK, this is weird...
-            if (!image)
-            {
-                logger->warn("[WorkingSetWatch] Thread {} had bad RIP {} cause a page fault at addr {}",
-                             entry.FaultingThreadId, entry.FaultingPc, entry.FaultingVa);
-            }
+            logger->warn("[WorkingSetWatch] Thread {} had bad RIP {} cause a page fault at addr {}",
+                         entry.FaultingThreadId, entry.FaultingPc, entry.FaultingVa);
         }
     }
 
     const auto timeTaken = std::chrono::duration_cast<pico::Milliseconds>(Clock::now() - start).count();
 
-    logger->info("[WorkingSetWatch] Time taken to walk page faults: {}ms, faults walked: {}, fault cnt: {}", timeTaken,
-                 pageFaultsWalked, faultCount);
+    logger->info("[WorkingSetWatch] Time taken to walk page faults: {}ms, fault count: {}", timeTaken, faultCount);
 }
 
 pico::Engine::WorkingSetWatcher& pico::Engine::WorkingSetWatcher::Get() noexcept
