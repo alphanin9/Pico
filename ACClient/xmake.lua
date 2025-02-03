@@ -4,7 +4,7 @@ target("ACClient")
     set_kind("shared")
 
     add_files("src/**.cpp")
-    add_files("src/**.asm")
+    add_files("src/**.S")
     add_headerfiles("src/**.hpp")
     add_includedirs("src/")
     add_deps("ACShared", "LinuxPE", "safetyhook")

@@ -122,8 +122,8 @@ void pico::Engine::ModuleData::DumpModuleInfo() noexcept
     logger->info("[IntegrityChecker] Size of PE headers: {}", m_sizeOfHeaders);
     logger->info("[IntegrityChecker] Relocation count: {}", m_relocations.size());
     logger->info("[IntegrityChecker] Function entry count: {}", m_functionEntries.size());
-    logger->info("[IntegrityChecker] Has large RWX sections: {}, is small for integrity: {}", shared::PE::HasLargeRWXSections(m_image),
-                 shared::PE::IsIntegrityCheckableImageSizeSmall(m_image));
+    logger->info("[IntegrityChecker] Has large RWX sections: {}, is small for integrity: {}",
+                 shared::PE::HasLargeRWXSections(m_image), shared::PE::IsIntegrityCheckableImageSizeSmall(m_image));
 
     logger->info("[IntegrityChecker] Raw SHA256: {}", m_sha256);
     logger->info("[IntegrityChecker] Is trusted by WinVerifyTrust: {}", m_isTrusted);
@@ -201,14 +201,16 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
     {
         funcCoverage++;
 
-        // Tiny optimization, most functions will be scanned with surface scan, still OK for catching detours at start - which is what matters for most stuff
+        // Tiny optimization, most functions will be scanned with surface scan, still OK for catching detours at start -
+        // which is what matters for most stuff
         constexpr auto MinimalScannedAmount = 16u;
-        constexpr auto RandomConstant = 0x3C;
+        constexpr auto RandomConstant = 0x5u;
 
         auto endpoint = endRva;
 
         // Do NOT apply this to the client module ever!
-        if (__rdtsc() % RandomConstant != 0u && !aIsClientModule)
+        // Around 1 in 5 times funcs will be covered fully
+        if ((__rdtsc() % RandomConstant) != 0u && !aIsClientModule)
         {
             partialCoverage++;
             endpoint = std::min(endRva, startRva + MinimalScannedAmount);
@@ -249,23 +251,25 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
                 {
                     if (s_engine.IsAddressInUs(addyToDetourTarget))
                     {
-                        logger->info("[IntegrityChecker] Found our detour at {}!", reinterpret_cast<void*>(addyToDetourTarget));
+                        logger->info("[IntegrityChecker] Found our detour at {}!",
+                                     reinterpret_cast<void*>(addyToDetourTarget));
                     }
 
                     const auto pe = shared::PE::GetImagePtr(reinterpret_cast<void*>(addyToDetourTarget));
 
                     if (!pe)
                     {
-                        logger->error("[IntegrityChecker] Found detour at RVA {:#x} pointing to address {}! No backing image.", i,
-                                      reinterpret_cast<void*>(addyToDetourTarget));
+                        logger->error(
+                            "[IntegrityChecker] Found detour at RVA {:#x} pointing to address {}! No backing image.", i,
+                            reinterpret_cast<void*>(addyToDetourTarget));
                     }
                     else
                     {
                         pico::UnicodeString imageName{};
                         wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(pe), imageName);
 
-                        logger->warn("[IntegrityChecker] Found detour for RVA {:#x} at module {}, addr {}, RVA {:#x}", i, shared::Util::ToUTF8(imageName),
-                                     reinterpret_cast<void*>(addyToDetourTarget),
+                        logger->warn("[IntegrityChecker] Found detour for RVA {:#x} at module {}, addr {}, RVA {:#x}",
+                                     i, shared::Util::ToUTF8(imageName), reinterpret_cast<void*>(addyToDetourTarget),
                                      addyToDetourTarget - reinterpret_cast<uintptr_t>(pe));
                     }
 
@@ -332,20 +336,22 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
 
             if (!VirtualQuery(memoryRelocPtr, &mbi, sizeof(mbi)))
             {
-                logger->info("[IntegrityChecker] Relocation {} (source {}, RVA {}) does not have a valid virtual addr!", memoryRelocPtr,
-                             reinterpret_cast<void*>(memoryReloc), reloc);
+                logger->info("[IntegrityChecker] Relocation {} (source {}, RVA {}) does not have a valid virtual addr!",
+                             memoryRelocPtr, reinterpret_cast<void*>(memoryReloc), reloc);
                 continue;
             }
 
             if (!shared::MemoryEnv::IsProtectionExecutable(mbi.Protect) &&
                 !shared::MemoryEnv::IsProtectionExecutable(mbi.AllocationProtect))
             {
-                logger->info("[IntegrityChecker] Relocation {} (source {}, RVA {}) does not point to executable memory!", memoryRelocPtr,
-                             reinterpret_cast<void*>(memoryReloc), reloc);
+                logger->info(
+                    "[IntegrityChecker] Relocation {} (source {}, RVA {}) does not point to executable memory!",
+                    memoryRelocPtr, reinterpret_cast<void*>(memoryReloc), reloc);
                 continue;
             }
 
-            logger->info("[IntegrityChecker] Relocation {} (source {}, RVA {}) points outside of an image! This is unlikely to be right.",
+            logger->info("[IntegrityChecker] Relocation {} (source {}, RVA {}) points outside of an image! This is "
+                         "unlikely to be right.",
                          memoryRelocPtr, reinterpret_cast<void*>(memoryReloc), reloc);
 
             continue;
@@ -358,8 +364,9 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
             pico::UnicodeString imageName{};
             wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(pe), imageName);
 
-            logger->info("[IntegrityChecker] Relocation {} (source {}, RVA {}) points to module {} instead of correct module!",
-                         memoryRelocPtr, reinterpret_cast<void*>(memoryReloc), reloc, shared::Util::ToUTF8(imageName));
+            logger->info(
+                "[IntegrityChecker] Relocation {} (source {}, RVA {}) points to module {} instead of correct module!",
+                memoryRelocPtr, reinterpret_cast<void*>(memoryReloc), reloc, shared::Util::ToUTF8(imageName));
         }
 
         if (aIsClientModule && !success)
@@ -368,8 +375,11 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
         }
     }
 
-    logger->info("[IntegrityChecker] Metrics: scanned funcs {}, surface skimmed: {}", funcCoverage, partialCoverage);
-
+    if (!aIsClientModule)
+    {
+        logger->info("[IntegrityChecker] Metrics: scanned funcs {}, surface skimmed: {}", funcCoverage,
+                     partialCoverage);
+    }
     return success;
 }
 
@@ -441,8 +451,7 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
         if (shouldReport)
         {
             logger->info("[IntegrityChecker] Module {} loaded, base address {}",
-                         shared::Util::ToUTF8(entry->FullDllName.Buffer),
-                           entry->DllBase);
+                         shared::Util::ToUTF8(entry->FullDllName.Buffer), entry->DllBase);
         }
 
         const auto hash = shared::FNV1a64WideCharStringWithLowerCase(entry->FullDllName.Buffer);
@@ -480,7 +489,7 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
         if (!moduleEntry.Load(entry->FullDllName.Buffer))
         {
             logger->error("[IntegrityChecker] Failed to load module entry for {}, base address {}!",
-                            shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
+                          shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
             continue;
         }
 
@@ -490,9 +499,7 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
         moduleEntry.m_lastIntegrityCheckTime = timestamp + pico::Seconds(i);
 
         logger->info("[IntegrityChecker] Scanning module {} at base {}",
-                     shared::Util::ToUTF8(entry->BaseDllName.Buffer),
-                       entry->DllBase);
-
+                     shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
 
         auto status = false;
 
@@ -512,12 +519,12 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
         if (status)
         {
             logger->info("[IntegrityChecker] Module {} at base {} passed its integrity check!",
-                           shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
+                         shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
         }
         else
         {
             logger->error("[IntegrityChecker] Module {} at base {} failed its integrity check!",
-                            shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
+                          shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
         }
 
         // Only two integrity checks should ever be done on each worker call - one for an arbitrary module,

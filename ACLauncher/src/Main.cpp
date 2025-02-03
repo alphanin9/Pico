@@ -88,13 +88,13 @@ pico::Int32 main(pico::Int32 aArgc, pico::Char** aArgv)
                        nullptr, &startupInfo, procInfo.addressof()))
     {
         // Note: Should be handled by build system somehow, this is not optimal
-        constexpr auto clientRelativePath = L".\\ACClient.dll";
+        constexpr auto ClientRelativePath = L".\\ACClient.dll";
 
         std::println("Process started, loading client into process...");
 
         pico::UnicodeString fullPath{};
 
-        wil::GetFullPathNameW(clientRelativePath, fullPath);
+        wil::GetFullPathNameW(ClientRelativePath, fullPath);
 
         std::println("Client path: {}", pico::shared::Util::ToUTF8(fullPath));
 

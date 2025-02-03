@@ -1,6 +1,7 @@
 #include <Engine/ContextScanner/ContextScanner.hpp>
 #include <Engine/Engine.hpp>
 #include <Engine/HandleSnap/HandleSnap.hpp>
+#include <Engine/InstrumentationCallbacks/InstrumentationCallbacks.hpp>
 #include <Engine/IntegrityChecker/IntegrityChecker.hpp>
 #include <Engine/Logging/Logger.hpp>
 #include <Engine/ProcessSnap/ProcessSnap.hpp>
@@ -60,6 +61,8 @@ void pico::Engine::Engine::TickMainThreadJobs() noexcept
     {
         ContextScanner::Get().TickMainThread();
     }
+
+    InstrumentationCallbacks::Get().TickMainThread();
 }
 
 pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept
