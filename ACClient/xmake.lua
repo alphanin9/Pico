@@ -1,4 +1,4 @@
-add_requires("base-n", "spdlog", "stduuid", "thread-pool")
+add_requires("asmjit", "base-n", "spdlog", "stduuid", "thread-pool")
 
 target("ACClient")
     set_kind("shared")
@@ -15,6 +15,7 @@ target("ACClient")
         "UUID_SYSTEM_GENERATOR"
     )
     add_packages(
+        "asmjit",
         "base-n", 
         "hopscotch-map", 
         "simdutf", 
@@ -22,7 +23,7 @@ target("ACClient")
         "stduuid", 
         "thread-pool", 
         "tiltedcore", 
-        "wil", 
+        "wil",
         "zydis"
     )
     add_syslinks("Ntdll", "Kernel32", "Ole32", "User32", "Version")
