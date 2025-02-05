@@ -92,7 +92,6 @@ void pico::Engine::ContextScanner::TickMainThread() noexcept
 
     frame->m_threadId = threadId;
     frame->m_rip = ctx.Rip;
-    frame->m_rsp = ctx.Rsp;
 
     // Align the stack pointer down, so we catch the whole page
     // Stack grows downwards
@@ -100,7 +99,7 @@ void pico::Engine::ContextScanner::TickMainThread() noexcept
     // And yes, having dynamic allocation on dynamic allocation is a bit silly too
     frame->m_stackPage.assign(s_engine.m_pageSize / sizeof(void*), {});
 
-    auto pageLow = shared::Util::AlignDown(frame->m_rsp, static_cast<pico::Uint64>(s_engine.m_pageSize));
+    auto pageLow = shared::Util::AlignDown(ctx.Rsp, static_cast<pico::Uint64>(s_engine.m_pageSize));
 
     // Copy stack into frame
     std::copy_n(reinterpret_cast<void**>(pageLow), frame->m_stackPage.size(), frame->m_stackPage.begin());

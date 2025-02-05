@@ -14,9 +14,6 @@ struct ContextFrame
     // Instruction pointer
     pico::Uint64 m_rip;
 
-    // Stack pointer
-    pico::Uint64 m_rsp;
-
     // Page stack pointer was on
     pico::Vector<void*> m_stackPage{};
 };

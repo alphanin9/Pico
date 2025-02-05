@@ -65,9 +65,11 @@ void pico::Engine::Engine::Tick() noexcept
         }
         break;
     }
+    default:
+        break;
     }
 
-    m_jobState = (m_jobState + 1 % MaxJobStates);
+    m_jobState = (m_jobState + 1) % MaxJobStates;
 }
 
 void pico::Engine::Engine::TickMainThreadJobs() noexcept

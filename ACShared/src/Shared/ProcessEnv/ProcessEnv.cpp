@@ -14,6 +14,18 @@ Windows::TEB64* pico::shared::ProcessEnv::GetCurrentThreadEnvironment() noexcept
     return reinterpret_cast<Windows::TEB64*>(NtCurrentTeb());
 }
 
+pico::Uint32 pico::shared::ProcessEnv::GetTID() noexcept
+{
+    return static_cast<pico::Uint32>(pico::shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueThread);
+}
+
+pico::Uint32 pico::shared::ProcessEnv::GetPID() noexcept
+{
+    static const auto s_pid = static_cast<pico::Uint32>(pico::shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
+
+    return s_pid;
+}
+
 pico::Vector<Windows::LDR_DATA_TABLE_ENTRY*> pico::shared::ProcessEnv::GetLoadedModuleList() noexcept
 {
     // Note that this is not safe code

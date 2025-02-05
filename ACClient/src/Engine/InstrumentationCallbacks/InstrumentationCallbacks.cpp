@@ -1,11 +1,14 @@
+#include <Engine/Engine.hpp>
 #include <Engine/InstrumentationCallbacks/InstrumentationCallbacks.hpp>
 #include <Engine/Logging/Logger.hpp>
+
 #include <lazy_importer.hpp>
 
 /*
  * A small note on instrumentation callback handler functions:
- * Either we use the handy stuff in TEB to avoid re-entrancy or write code in a way that it's never re-entrant
- * We elect to do the second, so some things may be restricted (not too many, though)
+ * Either we use the handy stuff in TEB to avoid re-entrancy or write code in a way that it's never re-entrant where it
+ * harms us
+ * We elect to do the second, so some things may be restricted (not too many, though!)
  */
 
 namespace Detail
@@ -25,19 +28,35 @@ public:
 void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(
     asmjit::x86::Assembler& aAssembler) noexcept
 {
-    auto captureContext = LI_FN(RtlCaptureContext).nt_cached<void*>();
-    auto restoreContext = LI_FN(RtlRestoreContext).nt_cached<void*>();
+    // While we could just import them, I'm not sure it'd work properly
+    // This does
+    static void* RtlCaptureContext = LI_FN(RtlCaptureContext).nt_cached();
+    static void* RtlRestoreContext = LI_FN(RtlRestoreContext).nt_cached();
+    static void* LdrInitializeThunk = LI_FN(LdrInitializeThunk).nt_cached();
+    static void* KiUserExceptionDispatcher = LI_FN(KiUserExceptionDispatcher).nt_cached();
+    static void* KiUserApcDispatcher = LI_FN(KiUserApcDispatcher).nt_cached();
+
+    static constexpr auto ContextRip = asmjit::x86::qword_ptr(asmjit::x86::rcx, offsetof(Windows::CONTEXT, Rip));
+    static constexpr auto ContextRcx = asmjit::x86::qword_ptr(asmjit::x86::rcx, offsetof(Windows::CONTEXT, Rcx));
+    static constexpr auto ContextRsp = asmjit::x86::qword_ptr(asmjit::x86::rcx, offsetof(Windows::CONTEXT, Rsp));
+
+    // Note: we only make any special logic for the important ones
+    // Because they're, well, *important*
+    const auto labelLdr = aAssembler.newNamedLabel("OnLdrInitializeThunk");
+    const auto labelException = aAssembler.newNamedLabel("OnKiUserExceptionDispatcher");
+    const auto labelApc = aAssembler.newNamedLabel("OnKiUserApcDispatcher");
+    const auto labelExit = aAssembler.newNamedLabel("OnExitCallback");
 
     // Source RIP is in R10
     // Backup stack pointer and RIP
-    auto gsPc = asmjit::x86::qword_ptr_abs(offsetof(Windows::TEB, InstrumentationCallbackPreviousPc));
-    gsPc.setSegment(asmjit::x86::gs);
+    auto GsPc = asmjit::x86::qword_ptr_abs(offsetof(Windows::TEB, InstrumentationCallbackPreviousPc));
+    GsPc.setSegment(asmjit::x86::gs);
 
-    auto gsSp = asmjit::x86::qword_ptr_abs(offsetof(Windows::TEB, InstrumentationCallbackPreviousSp));
-    gsSp.setSegment(asmjit::x86::gs);
+    auto GsSp = asmjit::x86::qword_ptr_abs(offsetof(Windows::TEB, InstrumentationCallbackPreviousSp));
+    GsSp.setSegment(asmjit::x86::gs);
 
-    aAssembler.mov(gsPc, asmjit::x86::r10);
-    aAssembler.mov(gsSp, asmjit::x86::rsp);
+    aAssembler.mov(GsPc, asmjit::x86::r10);
+    aAssembler.mov(GsSp, asmjit::x86::rsp);
 
     // Make stack space for the context we'll restore to after our handler, align stack, capture ctx
     aAssembler.sub(asmjit::x86::rsp, sizeof(Windows::CONTEXT));
@@ -48,34 +67,73 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(
 
     // Imports mess with us, so we hit back with baffling memes
     // We're also using actual exports from NTDLL instead of imports now
-    aAssembler.mov(asmjit::x86::r10, asmjit::imm(reinterpret_cast<pico::Uint64>(captureContext)));
+    aAssembler.mov(asmjit::x86::r10, asmjit::imm(reinterpret_cast<pico::Uint64>(RtlCaptureContext)));
     aAssembler.call(asmjit::x86::r10);
 
-    const auto contextRip = asmjit::x86::qword_ptr(asmjit::x86::rcx, offsetof(Windows::CONTEXT, Rip));
-    const auto contextRcx = asmjit::x86::qword_ptr(asmjit::x86::rcx, offsetof(Windows::CONTEXT, Rcx));
-    const auto contextRsp = asmjit::x86::qword_ptr(asmjit::x86::rcx, offsetof(Windows::CONTEXT, Rsp));
+    // After this we can do whatever we want to regs
+    // Backup context to be available in R15 if we want to use it
+    aAssembler.mov(asmjit::x86::r15, asmjit::x86::rcx);
+    aAssembler.mov(asmjit::x86::r10, GsPc);
 
-    aAssembler.mov(asmjit::x86::r10, gsPc);
-
-    aAssembler.mov(contextRip, asmjit::x86::r10);
-    aAssembler.mov(contextRcx, asmjit::x86::r11);
+    aAssembler.mov(ContextRip, asmjit::x86::r10);
+    aAssembler.mov(ContextRcx, asmjit::x86::r11);
 
     // R11 is useless now, scratch it
 
-    aAssembler.mov(asmjit::x86::r11, gsSp);
-    aAssembler.mov(contextRsp, asmjit::x86::r11);
+    aAssembler.mov(asmjit::x86::r11, GsSp);
+    aAssembler.mov(ContextRsp, asmjit::x86::r11);
+
     // Now that we have a backup context, we can start doing actual IC logic
+    aAssembler.cmp(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(LdrInitializeThunk));
+    aAssembler.jz(labelLdr);
+    aAssembler.cmp(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(KiUserExceptionDispatcher));
+    aAssembler.jz(labelException);
+    aAssembler.cmp(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(KiUserApcDispatcher));
+    aAssembler.jz(labelApc);
 
-    // For testing, we just restore context immediately tho
-    // RCX is still context
-
-    aAssembler.mov(asmjit::x86::rdx, 0u);
-    // Setup stack shadow space
+    // Start generic call
+    aAssembler.mov(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(&OnUnknownInstrumentationCallback));
     aAssembler.sub(asmjit::x86::rsp, 32u);
+    aAssembler.call(asmjit::x86::r10);
+    aAssembler.jmp(labelExit);
+    // End generic call
 
-    
-    // Go back
-    aAssembler.mov(asmjit::x86::r10, asmjit::imm(reinterpret_cast<pico::Uint64>(restoreContext)));
+    // Start OnLdrInitializeThunk
+    aAssembler.bind(labelLdr);
+    aAssembler.mov(asmjit::x86::rcx, ContextRcx);
+    aAssembler.mov(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(&OnLdrInitializeThunk));
+    aAssembler.sub(asmjit::x86::rsp, 32u);
+    aAssembler.call(asmjit::x86::r10);
+    aAssembler.jmp(labelExit);
+    // End OnLdrInitializeThunk
+
+    // Start OnKiUserExceptionDispatcher
+    aAssembler.bind(labelException);
+    aAssembler.mov(asmjit::x86::rcx, ContextRsp);
+    aAssembler.mov(asmjit::x86::rdx, asmjit::x86::rcx);
+    // IDK what the additional 32 bytes are
+    aAssembler.add(asmjit::x86::rcx, sizeof(Windows::CONTEXT) + 32u);
+
+    aAssembler.mov(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(&OnKiUserExceptionDispatcher));
+    aAssembler.sub(asmjit::x86::rsp, 32u);
+    aAssembler.call(asmjit::x86::r10);
+    aAssembler.jmp(labelExit);
+    // End OnKiUserExceptionDispatcher
+
+    // Start OnKiUserApcDispatcher
+    aAssembler.bind(labelApc);
+    aAssembler.mov(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(&OnKiUserApcDispatcher));
+    aAssembler.sub(asmjit::x86::rsp, 32u);
+    aAssembler.call(asmjit::x86::r10);
+    aAssembler.jmp(labelExit);
+    // End OnKiUserApcDispatcher
+
+    // Restore context and subsequently exit
+    aAssembler.bind(labelExit);
+    aAssembler.mov(asmjit::x86::rcx, asmjit::x86::r15);
+    aAssembler.mov(asmjit::x86::rdx, 0u);
+    aAssembler.sub(asmjit::x86::rsp, 32u);
+    aAssembler.mov(asmjit::x86::r10, asmjit::imm(reinterpret_cast<pico::Uint64>(RtlRestoreContext)));
     aAssembler.call(asmjit::x86::r10);
 
     // WTF?
@@ -104,16 +162,18 @@ void pico::Engine::InstrumentationCallbacks::SetupInstrumentationCallback() noex
 
     const auto err = m_jit.add(&m_callback, &m_codeHolder);
 
+    // Note: callback asm code should also be hashed and periodically compared
+    // Maybe regenerate callback once in a while as well?
     Logger::GetLogSink()->info("[Asmjit] Logs: {}", logger.data());
 
     if (err)
     {
-        Logger::GetLogSink()->error("Failed to assemble instrumentation callback! Error: {}",
+        Logger::GetLogSink()->error("[Asmjit] Failed to assemble instrumentation callback! Error: {}",
                                     asmjit::DebugUtils::errorAsString(err));
         return;
     }
 
-    Logger::GetLogSink()->info("Instrumentation callback placed at {}", m_callback);
+    Logger::GetLogSink()->info("[Instrumentation] Instrumentation callback placed at {}", m_callback);
 }
 
 void pico::Engine::InstrumentationCallbacks::TickMainThread() noexcept
@@ -133,6 +193,44 @@ void pico::Engine::InstrumentationCallbacks::TickMainThread() noexcept
         Windows::NtSetInformationProcess(GetCurrentProcess(), Windows::PROCESSINFOCLASS::ProcessInstrumentationCallback,
                                          &info, sizeof(info));
     }
+}
+
+void pico::Engine::InstrumentationCallbacks::OnLdrInitializeThunk(pico::Uint64 aThreadStartAddress) noexcept
+{
+    NewThreadRecord record{.m_threadStartAddress = aThreadStartAddress, .m_threadId = shared::ProcessEnv::GetTID()};
+
+    auto& instance = Get();
+
+    std::lock_guard _(instance.m_newThreadLock);
+    instance.m_newThreadRecords.push_back(record);
+}
+
+void pico::Engine::InstrumentationCallbacks::OnKiUserExceptionDispatcher(Windows::EXCEPTION_RECORD* aRecord,
+                                                                         Windows::CONTEXT* aContext) noexcept
+{
+    ExceptionRecord record{.m_record = *aRecord, .m_threadId = shared::ProcessEnv::GetTID(), .m_rip = aContext->Rip};
+
+    auto& engine = Engine::Get();
+
+    const auto pageLow = shared::Util::AlignDown(aContext->Rsp, static_cast<pico::Uint64>(engine.m_pageSize));
+
+    record.m_stackPage.assign(engine.m_pageSize / sizeof(void*), {});
+    std::copy_n(reinterpret_cast<void**>(pageLow), record.m_stackPage.size(), record.m_stackPage.begin());
+
+    auto& instance = Get();
+
+    std::lock_guard _(instance.m_exceptionLock);
+    instance.m_exceptionRecords.push_back(std::move(record));
+}
+
+void pico::Engine::InstrumentationCallbacks::OnKiUserApcDispatcher(Windows::CONTEXT*) noexcept
+{
+    // Currently ignored
+}
+
+void pico::Engine::InstrumentationCallbacks::OnUnknownInstrumentationCallback(Windows::CONTEXT*) noexcept
+{
+    // Currently ignored
 }
 
 pico::Engine::InstrumentationCallbacks& pico::Engine::InstrumentationCallbacks::Get() noexcept

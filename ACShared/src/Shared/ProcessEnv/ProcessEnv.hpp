@@ -18,6 +18,18 @@ Windows::PEB* GetProcessEnvironment() noexcept;
 Windows::TEB64* GetCurrentThreadEnvironment() noexcept;
 
 /**
+ * \brief Gets the current thread's ID.
+ * \returns The current thread's ID.
+ */
+pico::Uint32 GetTID() noexcept;
+
+/**
+ * \brief Gets the current process's ID.
+ * \returns The current process's ID.
+ */
+pico::Uint32 GetPID() noexcept;
+
+/**
  * \brief Enumerates all loaded modules and returns a vector of them.
  * \returns A vector of the current loaded modules.
  */
