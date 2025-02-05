@@ -18,6 +18,7 @@
 #include <Shared/Util/Alignment.hpp>
 #include <Shared/Util/FsUtils.hpp>
 #include <Shared/Util/Hashing.hpp>
+#include <Shared/Util/MsTaken.hpp>
 #include <Shared/Util/NonCopyable.hpp>
 #include <Shared/Util/NtdllCalls.hpp>
 #include <Shared/Util/StaticString.hpp>

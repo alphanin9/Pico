@@ -23,6 +23,11 @@ public:
                                                   reinterpret_cast<void*>(aOrigin));
     }
 };
+
+/**
+ * \brief Note: this is NECESSARY because TLS WILL fuck you up if you get callback in LdrInitializeThunk
+ */
+pico::Engine::InstrumentationCallbacks* m_globalPtr{};
 } // namespace Detail
 
 void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(
@@ -184,6 +189,8 @@ void pico::Engine::InstrumentationCallbacks::TickMainThread() noexcept
 {
     if (!m_isInitialized)
     {
+        // This is safe because we're a singleton anyway
+        Detail::m_globalPtr = this;
         SetupInstrumentationCallback();
         m_isInitialized = true;
     }
@@ -203,10 +210,15 @@ void pico::Engine::InstrumentationCallbacks::OnLdrInitializeThunk(pico::Uint64 a
 {
     NewThreadRecord record{.m_threadStartAddress = aThreadStartAddress, .m_threadId = shared::ProcessEnv::GetTID()};
 
-    auto& instance = Get();
+    std::lock_guard _(Detail::m_globalPtr->m_newThreadLock);
 
-    std::lock_guard _(instance.m_newThreadLock);
-    instance.m_newThreadRecords.push_back(record);
+    if (Detail::m_globalPtr->m_newThreadRecordCount >= Detail::m_globalPtr->m_newThreadRecords.size())
+    {
+        return;
+    }
+
+    Detail::m_globalPtr->m_newThreadRecords[Detail::m_globalPtr->m_newThreadRecordCount] = record;
+    Detail::m_globalPtr->m_newThreadRecordCount++;
 }
 
 void pico::Engine::InstrumentationCallbacks::OnKiUserExceptionDispatcher(Windows::EXCEPTION_RECORD* aRecord,
@@ -221,10 +233,8 @@ void pico::Engine::InstrumentationCallbacks::OnKiUserExceptionDispatcher(Windows
     record.m_stackPage.assign(engine.m_pageSize / sizeof(void*), {});
     std::copy_n(reinterpret_cast<void**>(pageLow), record.m_stackPage.size(), record.m_stackPage.begin());
 
-    auto& instance = Get();
-
-    std::lock_guard _(instance.m_exceptionLock);
-    instance.m_exceptionRecords.push_back(std::move(record));
+    std::lock_guard _(Detail::m_globalPtr->m_exceptionLock);
+    Detail::m_globalPtr->m_exceptionRecords.push_back(std::move(record));
 }
 
 void pico::Engine::InstrumentationCallbacks::OnKiUserApcDispatcher(Windows::CONTEXT*) noexcept

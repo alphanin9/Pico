@@ -65,8 +65,10 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
     void* m_callback{};
 
     // Neither should cause reentrancy, so we're fine!
+    // You can't do stuff before TLS kicks in, so no - we're not fine!
     std::mutex m_newThreadLock{};
-    pico::Vector<NewThreadRecord> m_newThreadRecords{};
+    pico::Int32 m_newThreadRecordCount{};
+    std::array<NewThreadRecord, 1024u> m_newThreadRecords{};
 
     std::mutex m_exceptionLock{};
     pico::Vector<ExceptionRecord> m_exceptionRecords{};
@@ -98,7 +100,7 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
 
     /**
      * \brief Instrumentation callback for new threads created in our process context. No particular re-entrancy
-     * constraints.
+     * constraints. Code has to not use TLS.
      * \param aThreadStartAddress The start address of the new thread.
      */
     static void OnLdrInitializeThunk(pico::Uint64 aThreadStartAddress) noexcept;

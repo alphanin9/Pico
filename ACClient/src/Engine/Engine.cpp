@@ -6,6 +6,7 @@
 #include <Engine/Logging/Logger.hpp>
 #include <Engine/ProcessSnap/ProcessSnap.hpp>
 #include <Engine/ThreadPool/ThreadPool.hpp>
+#include <Engine/WindowSnap/WindowSnap.hpp>
 #include <Engine/WorkingSetScanner/WorkingSetScanner.hpp>
 #include <Engine/WorkingSetWatch/WorkingSetWatch.hpp>
 
@@ -63,6 +64,8 @@ void pico::Engine::Engine::Tick() noexcept
         {
             threadPool.Dispatch([]() { Specific::CS2::Get().Tick(); });
         }
+
+        threadPool.Dispatch([]() { WindowSnap::Get().Tick(); });
         break;
     }
     default:
