@@ -84,11 +84,15 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(
     aAssembler.mov(ContextRsp, asmjit::x86::r11);
 
     // Now that we have a backup context, we can start doing actual IC logic
-    aAssembler.cmp(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(LdrInitializeThunk));
+    // Note: to avoid errors, we need to move to temp reg first
+    aAssembler.mov(asmjit::x86::r11, reinterpret_cast<pico::Uint64>(LdrInitializeThunk));
+    aAssembler.cmp(asmjit::x86::r10, asmjit::x86::r11);
     aAssembler.jz(labelLdr);
-    aAssembler.cmp(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(KiUserExceptionDispatcher));
+    aAssembler.mov(asmjit::x86::r11, reinterpret_cast<pico::Uint64>(KiUserExceptionDispatcher));
+    aAssembler.cmp(asmjit::x86::r10, asmjit::x86::r11);
     aAssembler.jz(labelException);
-    aAssembler.cmp(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(KiUserApcDispatcher));
+    aAssembler.mov(asmjit::x86::r11, reinterpret_cast<pico::Uint64>(KiUserApcDispatcher));
+    aAssembler.cmp(asmjit::x86::r10, asmjit::x86::r11);
     aAssembler.jz(labelApc);
 
     // Start generic call
@@ -164,7 +168,7 @@ void pico::Engine::InstrumentationCallbacks::SetupInstrumentationCallback() noex
 
     // Note: callback asm code should also be hashed and periodically compared
     // Maybe regenerate callback once in a while as well?
-    Logger::GetLogSink()->info("[Asmjit] Logs: {}", logger.data());
+    Logger::GetLogSink()->info("[Asmjit] JIT stub: \n{}", logger.data());
 
     if (err)
     {
