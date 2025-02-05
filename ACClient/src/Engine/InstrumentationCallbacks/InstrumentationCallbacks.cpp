@@ -25,12 +25,11 @@ public:
 void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(
     asmjit::x86::Assembler& aAssembler) noexcept
 {
+    auto captureContext = LI_FN(RtlCaptureContext).nt_cached<void*>();
+    auto restoreContext = LI_FN(RtlRestoreContext).nt_cached<void*>();
+
     // Source RIP is in R10
     // Backup stack pointer and RIP
-
-    // mov gs:xxx, r10
-    // mov gs:xxx, rsp
-
     auto gsPc = asmjit::x86::qword_ptr_abs(offsetof(Windows::TEB, InstrumentationCallbackPreviousPc));
     gsPc.setSegment(asmjit::x86::gs);
 
@@ -42,15 +41,10 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(
 
     // Make stack space for the context we'll restore to after our handler, align stack, capture ctx
     aAssembler.sub(asmjit::x86::rsp, sizeof(Windows::CONTEXT));
-
-    asmjit::Imm(pico::Uint64(-16u));
-
     aAssembler.and_(asmjit::x86::rsp, -16ull);
-    // Back the original RCX up
+    // Back the original RCX up, set up RCX for call
     aAssembler.mov(asmjit::x86::r11, asmjit::x86::rcx);
     aAssembler.mov(asmjit::x86::rcx, asmjit::x86::rsp);
-
-    auto captureContext = LI_FN(RtlCaptureContext).nt<void*>();
 
     // Imports mess with us, so we hit back with baffling memes
     // We're also using actual exports from NTDLL instead of imports now
@@ -76,12 +70,10 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(
     // RCX is still context
 
     aAssembler.mov(asmjit::x86::rdx, 0u);
-
-    // Align stack
+    // Setup stack shadow space
     aAssembler.sub(asmjit::x86::rsp, 32u);
 
-    auto restoreContext = LI_FN(RtlRestoreContext).nt_cached<void*>();
-
+    
     // Go back
     aAssembler.mov(asmjit::x86::r10, asmjit::imm(reinterpret_cast<pico::Uint64>(restoreContext)));
     aAssembler.call(asmjit::x86::r10);
