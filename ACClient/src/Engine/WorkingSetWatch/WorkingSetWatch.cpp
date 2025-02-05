@@ -11,8 +11,6 @@ void pico::Engine::WorkingSetWatcher::Tick() noexcept
                                          nullptr, 0u);
     }
 
-    const auto start = Clock::now();
-
     pico::Uint32 sizeWritten{};
 
     // Note: we don't have to reset the buffer or anything beforehand, the function will give us endpoint anyway
@@ -40,13 +38,10 @@ void pico::Engine::WorkingSetWatcher::Tick() noexcept
 
     auto& logger = Logger::GetLogSink();
 
-    auto pageFaultsWalked = 0;
-
     // A note: the old thread check was pointless, as nt!PspQueryWorkingSetWatch will filter out any page faults with
     // kernel mode addresses - and RPM/WPM will incur page faults in kernel mode for obvious reasons
     for (auto i = 0u; i < faultCount; i++)
     {
-        pageFaultsWalked++;
         auto& entry = m_workingSetWatchBuffer[i];
 
         void* image{};
@@ -59,10 +54,6 @@ void pico::Engine::WorkingSetWatcher::Tick() noexcept
                          entry.FaultingThreadId, entry.FaultingPc, entry.FaultingVa);
         }
     }
-
-    const auto timeTaken = std::chrono::duration_cast<pico::Milliseconds>(Clock::now() - start).count();
-
-    logger->info("[WorkingSetWatch] Time taken to walk page faults: {}ms, fault count: {}", timeTaken, faultCount);
 }
 
 pico::Engine::WorkingSetWatcher& pico::Engine::WorkingSetWatcher::Get() noexcept

@@ -7,7 +7,7 @@ namespace Detail
 {
 /**
  * \brief Utility function to close Wintrust data for driver verification properly.
- * 
+ *
  * \param aData A pointer to the WINTRUST_DATA structure.
  */
 void CloseWintrustDataDriver(WINTRUST_DATA* aData) noexcept
@@ -21,12 +21,13 @@ void CloseWintrustDataDriver(WINTRUST_DATA* aData) noexcept
 
 /**
  * \brief Utility function to setup the WINTRUST_DATA structure.
- * 
+ *
  * \param aData A reference to a WINTRUST_DATA structure.
  * \param aIsDriver Whether or not this call will verify a driver.
  * \param aIsCatalog Whether this call will verify a catalog or a file.
  */
-void SetupGeneralWintrustStructure(WINTRUST_DATA& aData, pico::Bool aIsDriver = false, pico::Bool aIsCatalog = false) noexcept
+void SetupGeneralWintrustStructure(WINTRUST_DATA& aData, pico::Bool aIsDriver = false,
+                                   pico::Bool aIsCatalog = false) noexcept
 {
     aData.cbStruct = sizeof(WINTRUST_DATA);
     aData.dwUIChoice = WTD_UI_NONE;
@@ -45,13 +46,15 @@ void SetupGeneralWintrustStructure(WINTRUST_DATA& aData, pico::Bool aIsDriver = 
     }
 }
 
-using WintrustDriverData = wil::unique_struct<WINTRUST_DATA, decltype(&CloseWintrustDataDriver), CloseWintrustDataDriver>;
+using WintrustDriverData =
+    wil::unique_struct<WINTRUST_DATA, decltype(&CloseWintrustDataDriver), CloseWintrustDataDriver>;
 
 static GUID s_driverPolicy = DRIVER_ACTION_VERIFY;
 static GUID s_defaultPolicy = WINTRUST_ACTION_GENERIC_VERIFY_V2;
-}
+} // namespace Detail
 
-pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrustFromCatalog(pico::UnicodeStringView aPath, EFileType aType) noexcept
+pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrustFromCatalog(pico::UnicodeStringView aPath,
+                                                                          EFileType aType) noexcept
 {
     auto& policy = aType == EFileType::Other ? Detail::s_defaultPolicy : Detail::s_driverPolicy;
 
@@ -71,20 +74,21 @@ pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrustFromCatalog(pico::
 
     pico::Uint32 hashSize{};
 
-    CryptCATAdminCalcHashFromFileHandle2(catalogAdmin.get(), fileHandle.get(),
-                                         reinterpret_cast<DWORD*>(&hashSize), nullptr, 0u);
+    CryptCATAdminCalcHashFromFileHandle2(catalogAdmin.get(), fileHandle.get(), reinterpret_cast<DWORD*>(&hashSize),
+                                         nullptr, 0u);
 
     pico::Vector<pico::Uint8> hashBuffer(hashSize, {});
 
-    if (!CryptCATAdminCalcHashFromFileHandle2(catalogAdmin.get(), fileHandle.get(),
-                                              reinterpret_cast<DWORD*>(&hashSize), hashBuffer.data(), 0u))
+    if (!CryptCATAdminCalcHashFromFileHandle2(catalogAdmin.get(), fileHandle.get(), reinterpret_cast<DWORD*>(&hashSize),
+                                              hashBuffer.data(), 0u))
     {
         return false;
     }
 
     auto hadMatchingCatalogs = false;
 
-    for (auto info : wil::make_crypt_catalog_enumerator(catalogAdmin, hashBuffer.data(), hashBuffer.size()))
+    for (auto info :
+         wil::make_crypt_catalog_enumerator(catalogAdmin, hashBuffer.data(), static_cast<DWORD>(hashBuffer.size())))
     {
         auto catalogRef = info.move_from_unique_hcatinfo();
 
@@ -102,7 +106,7 @@ pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrustFromCatalog(pico::
                 catalogTrustInfo.pcwszMemberFilePath = aPath.data();
                 catalogTrustInfo.hMemberFile = fileHandle.get();
                 catalogTrustInfo.pbCalculatedFileHash = hashBuffer.data();
-                catalogTrustInfo.cbCalculatedFileHash = hashBuffer.size();
+                catalogTrustInfo.cbCalculatedFileHash = static_cast<DWORD>(hashBuffer.size());
                 catalogTrustInfo.hCatAdmin = catalogAdmin.get();
 
                 switch (aType)

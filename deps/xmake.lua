@@ -2,6 +2,7 @@ add_requires("zydis")
 
 target("LinuxPE")
     set_default(false)
+    set_warnings("none")
     set_arch("x64")
     set_kind("headeronly")
     set_group("deps")
@@ -10,6 +11,7 @@ target("LinuxPE")
 
 target("safetyhook")
     set_default(false)
+    set_warnings("none")
     set_kind("static")
     set_group("deps")
     -- NOTE: The .asm files are there to paste the machine code of into src/mid_hook.cpp

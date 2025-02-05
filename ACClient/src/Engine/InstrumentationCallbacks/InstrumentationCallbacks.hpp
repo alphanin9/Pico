@@ -1,8 +1,15 @@
 #pragma once
 #include <Shared/Pico.hpp>
 
+#include <asmjit/asmjit.h>
+
 namespace pico::Engine
 {
+struct InstrumentationCallbackNewThreadRecord
+{
+      
+};
+
 /**
  * \brief A wrapper structure for handling instrumentation callback logic.
  * 
@@ -16,6 +23,26 @@ namespace pico::Engine
  */
 struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
 {
+    static constexpr asmjit::JitAllocator::CreateParams JitParams = {
+        .options = asmjit::JitAllocatorOptions::kFillUnusedMemory | asmjit::JitAllocatorOptions::kCustomFillPattern |
+                   asmjit::JitAllocatorOptions::kUseDualMapping,
+        .fillPattern = 0x51C0
+    };
+
+    pico::Bool m_isInitialized{};
+
+    asmjit::JitRuntime m_jit{ &JitParams };
+    asmjit::CodeHolder m_codeHolder{};
+
+    void* m_callback{};
+
+    void AssembleInstrumentationCallback(asmjit::x86::Assembler& aAssembler) noexcept;
+
+    /**
+     * \brief Assemble the instrumentation callback assembly stub at runtime.
+     */
+    void SetupInstrumentationCallback() noexcept;
+
     /**
      * \brief Apply the instrumentation callback.
      */

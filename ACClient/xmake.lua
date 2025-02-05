@@ -1,10 +1,10 @@
-add_requires("asmjit", "base-n", "spdlog", "stduuid", "thread-pool")
+add_requires("asmjit", "base-n", "lazy_importer", "spdlog", "stduuid", "thread-pool")
 
 target("ACClient")
     set_kind("shared")
-
+    set_warnings("all")
+    
     add_files("src/**.cpp")
-    add_files("src/**.S")
     add_headerfiles("src/**.hpp")
     add_includedirs("src/")
     add_deps("ACShared", "LinuxPE", "safetyhook")
@@ -17,7 +17,8 @@ target("ACClient")
     add_packages(
         "asmjit",
         "base-n", 
-        "hopscotch-map", 
+        "hopscotch-map",
+        "lazy_importer",
         "simdutf", 
         "spdlog", 
         "stduuid", 

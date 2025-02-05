@@ -1,6 +1,5 @@
 -- Set up shared defines for all project members
 set_languages("c++latest")
-set_warnings("all")
 
 set_arch("x64")
 set_runtimes("MT")

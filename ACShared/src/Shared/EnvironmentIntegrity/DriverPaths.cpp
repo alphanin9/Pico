@@ -5,29 +5,30 @@ pico::Vector<pico::shared::EnvironmentIntegrity::DriverInfo> pico::shared::Envir
     GetLoadedDriverPaths() noexcept
 {
     /* The more documented approach of using EnumDeviceDrivers + GetDeviceDriverFileNameW no longer works
-     * due to Win11 24H2 requiring debug privilege to get driver image base and GetDeviceDriverFileNameW 
+     * due to Win11 24H2 requiring debug privilege to get driver image base and GetDeviceDriverFileNameW
      * needing device driver image base
-    */
- 
+     */
+
     constexpr auto BufferSize = 0x1000;
 
     pico::Vector<pico::Uint8> buffer(BufferSize, {});
 
     pico::Uint32 sizeNeeded{};
 
-    auto status = Windows::NtQuerySystemInformation(Windows::SYSTEM_INFORMATION_CLASS::SystemModuleInformation,
-                                                    buffer.data(), buffer.size(), sizeNeeded);
+    auto status =
+        Windows::NtQuerySystemInformation(Windows::SYSTEM_INFORMATION_CLASS::SystemModuleInformation, buffer.data(),
+                                          static_cast<pico::Uint32>(buffer.size()), sizeNeeded);
 
     if (!NT_SUCCESS(status) && status != STATUS_INFO_LENGTH_MISMATCH)
     {
-        return {};   
+        return {};
     }
 
     while (status == STATUS_INFO_LENGTH_MISMATCH)
     {
         buffer.assign(sizeNeeded, {});
         status = Windows::NtQuerySystemInformation(Windows::SYSTEM_INFORMATION_CLASS::SystemModuleInformation,
-                                                   buffer.data(), buffer.size(), sizeNeeded);
+                                                   buffer.data(), static_cast<pico::Uint32>(buffer.size()), sizeNeeded);
     }
 
     if (!NT_SUCCESS(status))

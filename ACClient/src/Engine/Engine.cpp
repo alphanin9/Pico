@@ -25,20 +25,49 @@ void pico::Engine::Engine::Tick() noexcept
     }
 
     // Dispatch jobs here.
-    threadPool.Dispatch([]() { ContextScanner::Get().Tick(); });
-    threadPool.Dispatch([]() { IntegrityChecker::Get().Tick(); });
-    threadPool.Dispatch([]() { WorkingSetScanner::Get().Tick(); });
-    threadPool.Dispatch([]() { HandleSnap::Get().Tick(); });
-    threadPool.Dispatch([]() { ProcessSnap::Get().Tick(); });
+    // Note: consider doing something like a counter for job dispatching, add two jobs to threadpool every time counter
+    // spins.
+    // Keep logger job always running, though, that one's important - maybe WS watch too.
+
     threadPool.Dispatch([]() { WorkingSetWatcher::Get().Tick(); });
     threadPool.Dispatch([]() { Logger::Get().Tick(); });
 
-    static const auto s_isCS2 = Integration::IsCS2();
-
-    if (s_isCS2)
+    switch (m_jobState)
     {
-        threadPool.Dispatch([]() { Specific::CS2::Get().Tick(); });
+    case 0:
+    {
+        threadPool.Dispatch([]() { ContextScanner::Get().Tick(); });
+        break;
     }
+    case 1:
+    {
+        threadPool.Dispatch([]() { IntegrityChecker::Get().Tick(); });
+        break;
+    }
+    case 2:
+    {
+        threadPool.Dispatch([]() { WorkingSetScanner::Get().Tick(); });
+        break;
+    }
+    case 3:
+    {
+        threadPool.Dispatch([]() { HandleSnap::Get().Tick(); });
+        threadPool.Dispatch([]() { ProcessSnap::Get().Tick(); });
+        break;
+    }
+    case 4:
+    {
+        static const auto s_isCS2 = Integration::IsCS2();
+
+        if (s_isCS2)
+        {
+            threadPool.Dispatch([]() { Specific::CS2::Get().Tick(); });
+        }
+        break;
+    }
+    }
+
+    m_jobState = (m_jobState + 1 % MaxJobStates);
 }
 
 void pico::Engine::Engine::TickMainThreadJobs() noexcept
@@ -67,7 +96,7 @@ void pico::Engine::Engine::TickMainThreadJobs() noexcept
 
 pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept
 {
-    static auto& threadPool = ThreadPool::Get();
+    static auto& s_threadPool = ThreadPool::Get();
     auto& logger = Logger::GetLogSink();
 
     // Dispatch job to all threads
@@ -82,10 +111,12 @@ pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept
     // While this is not perfect at all, this check should help out with stutters a bit
     if (m_threadsUnderHeavyLoad <= 0)
     {
+        const auto jobCount = s_threadPool.m_pool.get_tasks_running();
+
         std::atomic<pico::Int64> counter{};
-        for (auto i = 0u; i < threadPool.m_pool.get_thread_count(); i++)
+        for (auto i = 0u; i < s_threadPool.m_pool.get_thread_count(); i++)
         {
-            threadPool.Dispatch([&counter]() { counter++; }, BS::pr::highest);
+            s_threadPool.Dispatch([&counter]() { counter++; }, BS::pr::highest);
         }
 
         // Given this is called before threadPool.CanPushJobs(),
@@ -94,25 +125,26 @@ pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept
 
         const auto start = Clock::now();
 
-        threadPool.m_pool.wait();
+        s_threadPool.m_pool.wait();
 
         const auto duration = std::chrono::duration_cast<pico::Milliseconds>(Clock::now() - start).count();
 
-        logger->info("[Engine] Time taken to wait: {}ms", duration);
+        logger->info("[Engine] Time taken to wait: {}ms, jobs: {}", duration, jobCount);
 
         if (duration > 20)
         {
             logger->error("[Engine] Unacceptable stutter from pool wait! This is a PROBLEM.");
         }
 
-        if (threadPool.m_pool.get_thread_count() != counter)
+        // This should never happen
+        if (s_threadPool.m_pool.get_thread_count() != counter)
         {
             logger->error("[Engine] Not all threads responded to pool");
             return false;
         }
     }
 
-    for (HANDLE i : threadPool.m_pool.get_native_handles())
+    for (HANDLE i : s_threadPool.m_pool.get_native_handles())
     {
         Windows::SYSTEM_THREAD_INFORMATION threadInfo{};
 

@@ -2,6 +2,8 @@ add_requires("lazy_importer", "openssl")
 
 target("ACShared")
     set_kind("static")
+    set_warnings("all")
+    
     add_files("src/**.cpp")
     add_includedirs("src/", { public = true })
     add_headerfiles("src/**.hpp")

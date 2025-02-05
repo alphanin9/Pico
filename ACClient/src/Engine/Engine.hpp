@@ -8,6 +8,11 @@ namespace pico::Engine
  */
 struct Engine : shared::Util::NonCopyableOrMovable
 {
+    static constexpr auto MaxJobStates = 5;
+
+    // The next set of jobs to be dispatched
+    pico::Int32 m_jobState{};
+
     // Counter to track how many threads in the thread pool are under heavy load that should not be waited for
     // Should never go below 0
     // Not sure about the design, makes it easy to break
@@ -32,6 +37,7 @@ struct Engine : shared::Util::NonCopyableOrMovable
 
     // Maximum UM address
     pico::Uint64 m_maximumUMAddress{};
+
 
     /**
      * \brief Get various information about the system that will not change during execution.
