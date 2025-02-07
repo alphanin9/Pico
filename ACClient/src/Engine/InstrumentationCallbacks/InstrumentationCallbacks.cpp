@@ -25,7 +25,7 @@ public:
 };
 
 /**
- * \brief Note: this is NECESSARY because TLS WILL fuck you up if you get callback in LdrInitializeThunk
+ * \brief Note: this is NECESSARY because TLS WILL fuck you up if you get callback in LdrInitializeThunk.
  */
 pico::Engine::InstrumentationCallbacks* m_globalPtr{};
 } // namespace Detail
@@ -109,6 +109,9 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(
 
     // Start OnLdrInitializeThunk
     aAssembler.bind(labelLdr);
+
+    // Get CONTEXT::Rcx twice
+    aAssembler.mov(asmjit::x86::rcx, ContextRcx);
     aAssembler.mov(asmjit::x86::rcx, ContextRcx);
     aAssembler.mov(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(&OnLdrInitializeThunk));
     aAssembler.sub(asmjit::x86::rsp, 32u);
@@ -149,40 +152,73 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(
     aAssembler.int3();
 }
 
+void pico::Engine::InstrumentationCallbacks::AssembleBusyLoop(asmjit::x86::Assembler& aAssembler) noexcept
+{
+    const auto labelEntry = aAssembler.newNamedLabel("JumpDest");
+
+    aAssembler.bind(labelEntry);
+    aAssembler.pause();
+    aAssembler.jmp(labelEntry);
+
+    // WTF?
+    aAssembler.int3();
+}
+
 void pico::Engine::InstrumentationCallbacks::SetupInstrumentationCallback() noexcept
 {
     // Set the code holder up
-    m_codeHolder.init(m_jit.environment(), m_jit.cpuFeatures());
+    m_callbackCodeHolder.init(m_jit.environment(), m_jit.cpuFeatures());
+    m_loopCodeHolder.init(m_jit.environment(), m_jit.cpuFeatures());
 
-    asmjit::StringLogger logger{};
+    asmjit::StringLogger callbackLogger{};
 
     Detail::AsmjitErrorReporter reporter{};
 
-    m_codeHolder.setErrorHandler(&reporter);
-    m_codeHolder.setLogger(&logger);
+    m_callbackCodeHolder.setErrorHandler(&reporter);
+    m_callbackCodeHolder.setLogger(&callbackLogger);
 
     // Unfortunately, the assembler is single use
-    asmjit::x86::Assembler assembler(&m_codeHolder);
+    asmjit::x86::Assembler callbackAssembler(&m_callbackCodeHolder);
 
-    assembler.setErrorHandler(&reporter);
+    callbackAssembler.setErrorHandler(&reporter);
 
     // Assemble
-    AssembleInstrumentationCallback(assembler);
+    AssembleInstrumentationCallback(callbackAssembler);
 
-    const auto err = m_jit.add(&m_callback, &m_codeHolder);
+    asmjit::StringLogger loopLogger{};
+
+    m_loopCodeHolder.setErrorHandler(&reporter);
+    m_loopCodeHolder.setLogger(&loopLogger);
+
+    asmjit::x86::Assembler loopAssembler(&m_loopCodeHolder);
+
+    loopAssembler.setErrorHandler(&reporter);
+
+    AssembleBusyLoop(loopAssembler);
+
+    const auto errCallback = m_jit.add(&m_callback, &m_callbackCodeHolder);
+    const auto errLoop = m_jit.add(&m_loop, &m_loopCodeHolder);
 
     // Note: callback asm code should also be hashed and periodically compared
     // Maybe regenerate callback once in a while as well?
-    Logger::GetLogSink()->info("[Asmjit] JIT stub: \n{}", logger.data());
+    Logger::GetLogSink()->info("[Asmjit] JIT callback stub: \n{}", callbackLogger.data());
+    Logger::GetLogSink()->info("[Asmjit] JIT loop stub: \n{}", loopLogger.data());
 
-    if (err)
+    if (errCallback)
     {
         Logger::GetLogSink()->error("[Asmjit] Failed to assemble instrumentation callback! Error: {}",
-                                    asmjit::DebugUtils::errorAsString(err));
+                                    asmjit::DebugUtils::errorAsString(errCallback));
         return;
     }
 
-    Logger::GetLogSink()->info("[Instrumentation] Instrumentation callback placed at {}", m_callback);
+    if (errLoop)
+    {
+        Logger::GetLogSink()->error("[Asmjit] Failed to assemble busy loop! Error: {}",
+                                    asmjit::DebugUtils::errorAsString(errLoop));
+        return;
+    }
+
+    Logger::GetLogSink()->info("[Instrumentation] Instrumentation callback pointer at {}, loop pointer: {}", m_callback, m_loop);
 }
 
 void pico::Engine::InstrumentationCallbacks::TickMainThread() noexcept
@@ -204,6 +240,78 @@ void pico::Engine::InstrumentationCallbacks::TickMainThread() noexcept
         Windows::NtSetInformationProcess(GetCurrentProcess(), Windows::PROCESSINFOCLASS::ProcessInstrumentationCallback,
                                          &info, sizeof(info));
     }
+}
+
+void pico::Engine::InstrumentationCallbacks::Tick() noexcept
+{
+    UpdateThreads();
+    UpdateExceptions();
+}
+
+void pico::Engine::InstrumentationCallbacks::UpdateThreads() noexcept
+{
+    // No deep analysis just yet...
+    // The assumption is that
+    // A: Threads aren't created every "tick", a few RtlPcToFileHeader calls are fine
+    // B: Holding mutex for a while is fine
+    // C: LdrInitializeThunk waiting for mutex doesn't kill everything with fire
+    auto& logger = Logger::GetLogSink();
+
+    std::lock_guard _(m_newThreadLock);
+
+    if (m_newThreadRecordCount)
+    {
+        logger->info("[Instrumentation] Created thread count: {}", m_newThreadRecordCount);
+    }
+
+    for (auto i = 0; i < m_newThreadRecordCount; i++)
+    {
+        logger->info("[Instrumentation] Thread ID {}, start address: {:#x}", m_newThreadRecords[i].m_threadId,
+                     m_newThreadRecords[i].m_threadStartAddress);
+
+        void* pe{};
+
+        RtlPcToFileHeader(reinterpret_cast<void*>(m_newThreadRecords[i].m_threadStartAddress), &pe);
+
+        if (!pe)
+        {
+            logger->error("[Instrumentation] No backing module found for thread start address!");
+            continue;
+        }
+
+        pico::UnicodeString libName{};
+        wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(pe), libName);
+
+        logger->info("[Instrumentation] Owning module: {}", shared::Util::ToUTF8(libName));
+    }
+
+    m_newThreadRecordCount = 0;
+}
+
+void pico::Engine::InstrumentationCallbacks::UpdateExceptions() noexcept
+{
+    auto& logger = Logger::GetLogSink();
+
+    std::lock_guard _(m_exceptionLock);
+
+    if (m_exceptionRecords.size())
+    {
+        logger->info("[Instrumentation] New exception count: {}", m_exceptionRecords.size());
+    }
+
+    // Analyze stack?
+    // Note: this could take a while with exception hooking in play
+    for (auto& record : m_exceptionRecords)
+    {
+        
+    }
+
+    m_exceptionRecords.clear();
+}
+
+void pico::Engine::InstrumentationCallbacks::Teardown() noexcept
+{
+    // TODO
 }
 
 void pico::Engine::InstrumentationCallbacks::OnLdrInitializeThunk(pico::Uint64 aThreadStartAddress) noexcept
@@ -239,12 +347,12 @@ void pico::Engine::InstrumentationCallbacks::OnKiUserExceptionDispatcher(Windows
 
 void pico::Engine::InstrumentationCallbacks::OnKiUserApcDispatcher(Windows::CONTEXT*) noexcept
 {
-    // Currently ignored
+    // Currently ignored, unsure on how to analyze
 }
 
 void pico::Engine::InstrumentationCallbacks::OnUnknownInstrumentationCallback(Windows::CONTEXT*) noexcept
 {
-    // Currently ignored
+    // Currently ignored, lots of CPU time and very tight constraints
 }
 
 pico::Engine::InstrumentationCallbacks& pico::Engine::InstrumentationCallbacks::Get() noexcept

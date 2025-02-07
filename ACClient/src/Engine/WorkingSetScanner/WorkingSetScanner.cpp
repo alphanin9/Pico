@@ -9,13 +9,13 @@ void pico::Engine::WorkingSetScanner::Tick() noexcept
 
     // A potential optimization could be caching the addresses of the allocations we have already walked and skipping
     // them in the WS. Keep in mind the main performance hog is the querying of the process working set, everything else
-    // takes very little time.
+    // takes very little time (maybe if you VirtualQuery everything in one tick).
 
     const auto timestamp = Clock::now();
 
     if (timestamp > m_nextWorkingSetCacheUpdate)
     {
-        const auto start = Clock::now();
+        shared::Util::MsTaken watch{};
         // Increment bad thread counter
         // Pray this doesn't race lol
         {
@@ -23,12 +23,8 @@ void pico::Engine::WorkingSetScanner::Tick() noexcept
             m_workingSetCache = shared::MemoryEnv::GetProcessWorkingSet();
             // Can wait for completion now, the rest doesn't take much
         }
-        
-        const auto taken =
-            std::chrono::duration_cast<pico::Milliseconds>(Clock::now() - start)
-                .count();
 
-        logger->info("[WorkingSetScanner] Time to capture working set: {}ms", taken);
+        logger->info("[WorkingSetScanner] Time to capture working set: {}ms", watch.Now());
         m_nextWorkingSetCacheUpdate = timestamp + WorkingSetUpdateTime;
 
         // Reset state

@@ -55,14 +55,24 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
     static constexpr asmjit::JitAllocator::CreateParams JitParams = {
         .options = asmjit::JitAllocatorOptions::kFillUnusedMemory | asmjit::JitAllocatorOptions::kCustomFillPattern |
                    asmjit::JitAllocatorOptions::kUseDualMapping,
-        .fillPattern = 0x51C0};
+        .fillPattern = 0x51C051C0};
 
     pico::Bool m_isInitialized{};
 
+    // JIT runtime, needs special treatment for cleanup
     asmjit::JitRuntime m_jit{&JitParams};
-    asmjit::CodeHolder m_codeHolder{};
 
+    // Code holder for instrumentation callback logic
+    asmjit::CodeHolder m_callbackCodeHolder{};
+
+    // Code holder for the spin loop
+    asmjit::CodeHolder m_loopCodeHolder{};
+
+    // Pointer to assembled callback
     void* m_callback{};
+
+    // Pointer to assembled loop
+    void* m_loop{};
 
     // Neither should cause reentrancy, so we're fine!
     // You can't do stuff before TLS kicks in, so no - we're not fine!
@@ -75,10 +85,15 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
 
     /**
      * \brief Assembles the instrumentation callback's JIT stub.
-     *
      * \param aAssembler The assembler the function will use to emit instructions.
      */
     void AssembleInstrumentationCallback(asmjit::x86::Assembler& aAssembler) noexcept;
+
+    /**
+     * \brief Assembles a loop that does nothing for tearing down the instrumentation callback stub.
+     * \param aAssembler The assembler the function will use to emit instructions.
+     */
+    void AssembleBusyLoop(asmjit::x86::Assembler& aAssembler) noexcept;
 
     /**
      * \brief Setup the instrumentation callback stub.
@@ -89,6 +104,27 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
      * \brief Apply the instrumentation callback. If not initialized yet, assemble the instrumentation callback.
      */
     void TickMainThread() noexcept;
+
+    /**
+     * \brief Ticks the component in the thread pool. Analyzes new results of the callbacks.
+     */
+    void Tick() noexcept;
+
+    /**
+     * \brief Analyzes the records of new threads created.
+     */
+    void UpdateThreads() noexcept;
+
+    /**
+     * \brief Analyzes the records of new exceptions.
+     */
+    void UpdateExceptions() noexcept;
+
+    /**
+     * \brief Attempts to disable the instrumentation callback. This is necessary, as otherwise the protected
+     * application will have interesting crashes during exit.
+     */
+    void Teardown() noexcept;
 
     /**
      * \brief Get an instance of the instrumentation callbacks handler.
@@ -115,14 +151,14 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
                                             Windows::CONTEXT* aContext) noexcept;
 
     /**
-     * \brief Instrumentation callback for APCs received for our process.
+     * \brief Instrumentation callback for APCs received for our process. Unknown re-entrancy constraints.
      * \param aCtx The instrumentation callback's acquired context.
      */
     static void OnKiUserApcDispatcher(Windows::CONTEXT* aCtx) noexcept;
 
     /**
      * \brief Instrumentation callback for unknown calls (no specific handler). Can be a system call or something we
-     * missed.
+     * missed. Cannot do more system calls.
      * \param aCtx The instrumentation callback's acquired context.
      */
     static void OnUnknownInstrumentationCallback(Windows::CONTEXT* aCtx) noexcept;

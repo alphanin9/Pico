@@ -22,6 +22,8 @@ pico::Engine::ThreadPool::ThreadPool() noexcept
 
         m_threadIds.push_back(reinterpret_cast<pico::Uint32>(threadInfo.ClientId.UniqueThread));
     }
+
+    m_canSubmitJobs = true;
 }
 
 pico::Bool pico::Engine::ThreadPool::CanPushJobs() const noexcept
@@ -29,6 +31,14 @@ pico::Bool pico::Engine::ThreadPool::CanPushJobs() const noexcept
     // To avoid troublesome situations, we only push more jobs 
     // once the pool has handled everything else that we've thrown at it.
     return m_pool.get_tasks_total() == 0u;
+}
+
+void pico::Engine::ThreadPool::Teardown() noexcept
+{
+    m_pool.purge();
+    m_pool.wait();
+
+    m_canSubmitJobs = false;
 }
 
 pico::Engine::ThreadPool& pico::Engine::ThreadPool::Get() noexcept

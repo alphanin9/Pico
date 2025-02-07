@@ -25,6 +25,9 @@ struct ThreadPool : public shared::Util::NonCopyableOrMovable
     // NOTE: In a production environment, it would be advised to check 
     // the integrity of m_threadIds array
 
+    // Whether or not jobs can be submitted to the pool.
+    pico::Bool m_canSubmitJobs{};
+
     ThreadPool() noexcept;
 
     /**
@@ -36,7 +39,10 @@ struct ThreadPool : public shared::Util::NonCopyableOrMovable
     template<typename Fn>
     void Dispatch(Fn&& aFunc, BS::priority_t aPriority = BS::pr::normal) noexcept
     {
-        m_pool.detach_task(std::forward<Fn>(aFunc), aPriority);
+        if (m_canSubmitJobs)
+        {
+            m_pool.detach_task(std::forward<Fn>(aFunc), aPriority);
+        }
     }
 
     /**
@@ -44,6 +50,11 @@ struct ThreadPool : public shared::Util::NonCopyableOrMovable
      * \return Whether or not it is OK to queue jobs to the thread pool right now.
      */
     pico::Bool CanPushJobs() const noexcept;
+
+    /**
+     * \brief Shuts the thread pool down. Jobs can no longer be submitted afterwards.
+     */
+    void Teardown() noexcept;
 
     /**
      * \brief Get a singleton instance of the thread pool.

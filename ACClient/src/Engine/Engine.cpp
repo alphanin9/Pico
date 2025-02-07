@@ -15,6 +15,11 @@
 #include <Engine/Specific/CS2/CS2.hpp>
 void pico::Engine::Engine::Tick() noexcept
 {
+    if (!m_canExecute)
+    {
+        return;
+    }
+
     TickMainThreadJobs();
 
     auto& threadPool = ThreadPool::Get();
@@ -28,7 +33,7 @@ void pico::Engine::Engine::Tick() noexcept
     // Dispatch jobs here.
     // Note: consider doing something like a counter for job dispatching, add two jobs to threadpool every time counter
     // spins.
-    // Keep logger job always running, though, that one's important - maybe WS watch too.
+    // Keep logger job always running, though, that one's important - maybe WS watch too, it needs fresh info.
 
     threadPool.Dispatch([]() { WorkingSetWatcher::Get().Tick(); });
     threadPool.Dispatch([]() { Logger::Get().Tick(); });
@@ -38,6 +43,7 @@ void pico::Engine::Engine::Tick() noexcept
     case 0:
     {
         threadPool.Dispatch([]() { ContextScanner::Get().Tick(); });
+        threadPool.Dispatch([]() { InstrumentationCallbacks::Get().Tick(); });
         break;
     }
     case 1:
@@ -175,7 +181,7 @@ pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept
 
 void pico::Engine::Engine::Setup() noexcept
 {
-    if (m_hasRunPreflight)
+    if (m_canExecute)
     {
         return;
     }
@@ -228,7 +234,7 @@ void pico::Engine::Engine::Setup() noexcept
         }
     }
 
-    m_hasRunPreflight = true;
+    m_canExecute = true;
 }
 
 void pico::Engine::Engine::SetupModuleData() noexcept
@@ -262,6 +268,17 @@ void pico::Engine::Engine::SetupModuleData() noexcept
     m_pageSize = basicInfo.PageSize;
     m_minimumUMAddress = basicInfo.MinimumUserModeAddress;
     m_maximumUMAddress = basicInfo.MaximumUserModeAddress;
+}
+
+void pico::Engine::Engine::Teardown() noexcept
+{
+    m_canExecute = false;
+
+    auto& pool = ThreadPool::Get();
+    auto& instrumentationCallbacks = InstrumentationCallbacks::Get();
+
+    pool.Teardown();
+    instrumentationCallbacks.Teardown();
 }
 
 pico::Engine::Engine& pico::Engine::Engine::Get() noexcept

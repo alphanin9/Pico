@@ -18,8 +18,8 @@ struct Engine : shared::Util::NonCopyableOrMovable
     // Not sure about the design, makes it easy to break
     pico::AtomicInt m_threadsUnderHeavyLoad{};
 
-    // Whether or not we've initialized
-    pico::Bool m_hasRunPreflight{};
+    // Whether or not we can execute.
+    pico::Bool m_canExecute{};
 
     // Client module base
     void* m_moduleBase{};
@@ -37,7 +37,6 @@ struct Engine : shared::Util::NonCopyableOrMovable
 
     // Maximum UM address
     pico::Uint64 m_maximumUMAddress{};
-
 
     /**
      * \brief Get various information about the system that will not change during execution.
@@ -70,6 +69,12 @@ struct Engine : shared::Util::NonCopyableOrMovable
      * maybe setting instrumentation callback...
      */
     void TickMainThreadJobs() noexcept;
+
+    /**
+     * \brief Prepare for unloading. Wait for all jobs to be finished and freeze the thread pool. Call teardown
+     * functions on any components necessitating them.
+     */
+    void Teardown() noexcept;
 
     /**
      * \brief Checks if the thread pool has been tampered with.
