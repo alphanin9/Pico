@@ -84,7 +84,7 @@ void pico::Engine::Engine::Tick() noexcept
 void pico::Engine::Engine::TickMainThreadJobs() noexcept
 {
     // Modulos for timestamp counter to check things
-    constexpr auto ThreadPoolCheck = 0x51Cu;
+    constexpr auto ThreadPoolCheck = 0x51C0ACu;
     constexpr auto ThreadCtxCheck = 0xC15u;
 
     const auto timestampCounter = __rdtsc();
