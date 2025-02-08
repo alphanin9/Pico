@@ -7,7 +7,6 @@ set_runtimes("MD")
 set_symbols("debug")
 set_strip("all")
 set_optimize("fastest")
-set_toolchains("clang-cl")
 
 -- Shared requirements
 add_requires("hopscotch-map", "simdutf", "tiltedcore", "wil", "zydis")
