@@ -3,6 +3,7 @@ add_requires("lazy_importer", "picosha2")
 target("ACShared")
     set_kind("static")
     set_warnings("all")
+    set_exceptions("no-cxx")
     
     add_files("src/**.cpp")
     add_includedirs("src/", { public = true })

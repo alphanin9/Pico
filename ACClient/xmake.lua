@@ -3,6 +3,7 @@ add_requires("asmjit", "base-n", "lazy_importer", "spdlog", "stduuid", "thread-p
 target("ACClient")
     set_kind("shared")
     set_warnings("all")
+    set_exceptions("no-cxx")
     
     add_files("src/**.cpp")
     add_headerfiles("src/**.hpp")
