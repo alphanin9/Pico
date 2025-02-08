@@ -70,7 +70,7 @@ inline auto Hook(const TCallback& aCallback, typename TTarget::Callable* aOrigin
 {
     using Wrapper = Detail::HookWrapper<TCallback>;
     using Handler = Detail::HookHandler<TTarget, Wrapper, TFlow, TRun>;
-    return Handler::Attach(HookingDriver::GetDefault(), Wrapper(aCallback, this), aOriginal);
+    return Handler::Attach(HookingDriver::GetDefault(), Wrapper(aCallback), aOriginal);
 }
 
 template<typename TTarget, typename TCallback, HookRun TRun = HookRun::Default>
@@ -79,7 +79,7 @@ inline auto HookBefore(const TCallback& aCallback)
 {
     using Wrapper = Detail::HookWrapper<TCallback>;
     using Handler = Detail::HookHandler<TTarget, Wrapper, HookFlow::Before, TRun>;
-    return Handler::Attach(HookingDriver::GetDefault(), Wrapper(aCallback, this));
+    return Handler::Attach(HookingDriver::GetDefault(), Wrapper(aCallback));
 }
 
 template<typename TTarget, typename TCallback>
@@ -95,7 +95,7 @@ inline auto HookAfter(const TCallback& aCallback)
 {
     using Wrapper = Detail::HookWrapper<TCallback>;
     using Handler = Detail::HookHandler<TTarget, Wrapper, HookFlow::After, TRun>;
-    return Handler::Attach(HookingDriver::GetDefault(), Wrapper(aCallback, this));
+    return Handler::Attach(HookingDriver::GetDefault(), Wrapper(aCallback));
 }
 
 template<typename TTarget, typename TCallback>
@@ -111,7 +111,7 @@ inline auto HookWrap(const TCallback& aCallback)
 {
     using Wrapper = Detail::HookWrapper<TCallback>;
     using Handler = Detail::HookHandler<TTarget, Wrapper, HookFlow::Wrap, TRun>;
-    return Handler::Attach(HookingDriver::GetDefault(), Wrapper(aCallback, this));
+    return Handler::Attach(HookingDriver::GetDefault(), Wrapper(aCallback));
 }
 
 template<typename TTarget, typename TCallback>
