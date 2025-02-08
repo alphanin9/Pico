@@ -1,5 +1,4 @@
 #include <Shared/Pico.hpp>
-#include <fstream>
 #include <print>
 
 /* NOTE: This launcher is not fit for production code and should only be used for debugging
@@ -126,6 +125,22 @@ pico::Int32 main(pico::Int32 aArgc, pico::Char** aArgv)
         // Resume application to let all threads init
         ResumeThread(procInfo.hThread);
         wil::handle_wait(threadHandle.get());
+
+        std::println("Waiting for process exit...");
+
+        wil::handle_wait(procInfo.hProcess);
+
+        pico::Uint32 exitCode{};
+
+        GetExitCodeProcess(procInfo.hProcess, reinterpret_cast<LPDWORD>(&exitCode));
+
+        std::println("Process exit code: {:#x}", exitCode);
+
+        if (!NT_SUCCESS(exitCode))
+        {
+            std::println("Process exited with error! See if you can make a minidump now.");
+        }
+
         // We're done with loading, free the client's path from memory
         // Everything else will be handled by wil
         pico::Size freeSize{};

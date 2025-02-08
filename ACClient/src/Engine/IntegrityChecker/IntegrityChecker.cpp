@@ -133,6 +133,10 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
                                                       pico::shared::PE::Image* aImage,
                                                       pico::Bool aIsClientModule) const noexcept
 {
+    // Very blanket, IDK how it'll work out in practice
+    // Integrity checking is VERY expensive no matter how you play it
+    EngineThreadLoadGuard guard{};
+
     static auto& s_engine = Engine::Get();
     auto& logger = Logger::GetLogSink();
 
@@ -537,21 +541,8 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
         logger->info("[IntegrityChecker] Scanning module {} at base {}",
                      shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
 
-        auto status = false;
-
-        // IDK about this
-        constexpr pico::Size BigFileSize = 0x1000000;
-
         // Why does GetImagePtr return bogus values every now and then? Who knows?
-        if (moduleEntry.m_modulePeFileData.size() > BigFileSize)
-        {
-            EngineThreadLoadGuard guard{};
-            status = ScanModule(moduleEntry, reinterpret_cast<shared::PE::Image*>(entry->DllBase), false);
-        }
-        else
-        {
-            status = ScanModule(moduleEntry, reinterpret_cast<shared::PE::Image*>(entry->DllBase), false);
-        }
+        const auto status = ScanModule(moduleEntry, reinterpret_cast<shared::PE::Image*>(entry->DllBase), false);
 
         if (status)
         {

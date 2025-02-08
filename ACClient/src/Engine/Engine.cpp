@@ -136,7 +136,11 @@ pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept
 
         const auto start = Clock::now();
 
-        s_threadPool.m_pool.wait();
+        // We should not timeout forever ever
+        // However, 1s of timeout time being reported kinda tells you everything you need to know
+        constexpr auto MaxTimeOutDuration = 1000u;
+
+        s_threadPool.m_pool.wait_for(pico::Milliseconds{MaxTimeOutDuration});
 
         const auto duration = std::chrono::duration_cast<pico::Milliseconds>(Clock::now() - start).count();
 
