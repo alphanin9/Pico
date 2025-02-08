@@ -55,15 +55,15 @@ pico::String pico::shared::Files::GetFileSHA256(pico::UnicodeStringView aPath) n
         return {};
     }
 
-    wil::unique_mapview_ptr mapView{MapViewOfFile(fileMapping.get(), FILE_MAP_READ, 0u, 0u, 0u)};
+    wil::unique_mapview_ptr<void> mapView{MapViewOfFile(fileMapping.get(), FILE_MAP_READ, 0u, 0u, 0u)};
 
     if (!mapView)
     {
         return {};
     }
 
-    auto begin = reinterpret_cast<pico::Uint8*>(mapView.get());
-    auto end = begin + fileSize.QuadPart;
+    const auto begin = reinterpret_cast<pico::Uint8*>(mapView.get());
+    const auto end = begin + fileSize.QuadPart;
 
     std::array<pico::Uint8, picosha2::k_digest_size> buffer{};
 
