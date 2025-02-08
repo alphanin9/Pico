@@ -84,20 +84,20 @@ void pico::Engine::Engine::Tick() noexcept
 void pico::Engine::Engine::TickMainThreadJobs() noexcept
 {
     // Modulos for timestamp counter to check things
-    constexpr auto ThreadPoolCheck = 0x51C0ACu;
+    constexpr auto ThreadPoolCheck = 0x51Cu;
     constexpr auto ThreadCtxCheck = 0xC15u;
 
     const auto timestampCounter = __rdtsc();
 
     auto& logger = Logger::GetLogSink();
 
-    if ((timestampCounter % ThreadPoolCheck) == 0 && !IsThreadPoolOK())
+    if ((timestampCounter % ThreadPoolCheck) == 0u && !IsThreadPoolOK())
     {
         // In production we should report the issue and crash
         logger->error("[Engine] Thread pool had issues!");
     }
 
-    if ((timestampCounter % ThreadCtxCheck) == 0)
+    if ((timestampCounter % ThreadCtxCheck) == 0u)
     {
         ContextScanner::Get().TickMainThread();
     }
@@ -119,8 +119,10 @@ pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept
         logger->critical("[Engine] Engine::m_threadsUnderHeavyLoad is negative, this should NEVER happen!");
     }
 
+    constexpr auto CheckForBrokenPoolConstant = 0x12C01;
+
     // While this is not perfect at all, this check should help out with stutters a bit
-    if (m_threadsUnderHeavyLoad <= 0)
+    if (m_threadsUnderHeavyLoad <= 0 && (__rdtsc() % CheckForBrokenPoolConstant) == 0u)
     {
         const auto jobCount = s_threadPool.m_pool.get_tasks_running();
 
