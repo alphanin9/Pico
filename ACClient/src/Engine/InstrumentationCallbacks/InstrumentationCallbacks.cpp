@@ -311,7 +311,16 @@ void pico::Engine::InstrumentationCallbacks::UpdateExceptions() noexcept
 
 void pico::Engine::InstrumentationCallbacks::Teardown() noexcept
 {
-    // TODO
+    // Unset callback
+    // It turns out we might not need to spin after all - internally kernel sets some lock when setting/unsetting IC, it seems
+    Windows::PROCESS_INSTRUMENTATION_CALLBACK_INFORMATION info{};
+
+    info.Callback = nullptr;
+
+    Windows::NtSetInformationProcess(GetCurrentProcess(), Windows::PROCESSINFOCLASS::ProcessInstrumentationCallback,
+                                     &info, sizeof(info));
+
+    // TODO: rest of this
 }
 
 void pico::Engine::InstrumentationCallbacks::OnLdrInitializeThunk(pico::Uint64 aThreadStartAddress) noexcept

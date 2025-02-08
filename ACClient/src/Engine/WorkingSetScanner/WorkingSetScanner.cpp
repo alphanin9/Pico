@@ -11,6 +11,11 @@ void pico::Engine::WorkingSetScanner::Tick() noexcept
     // them in the WS. Keep in mind the main performance hog is the querying of the process working set, everything else
     // takes very little time (maybe if you VirtualQuery everything in one tick).
 
+    // Note: maybe using static in-class buffer for working set entries would be better?
+    // 32MB should fit around 16GB of working set
+    // 128MB should fit 64GB - plenty for most apps
+    // Due to it being in .data it shouldn't meaningfully affect binary size
+
     const auto timestamp = Clock::now();
 
     if (timestamp > m_nextWorkingSetCacheUpdate)
@@ -18,24 +23,48 @@ void pico::Engine::WorkingSetScanner::Tick() noexcept
         shared::Util::MsTaken watch{};
         // Increment bad thread counter
         // Pray this doesn't race lol
+
+        if (UpdateWorkingSet())
         {
-            EngineThreadLoadGuard guard{};
-            m_workingSetCache = shared::MemoryEnv::GetProcessWorkingSet();
-            // Can wait for completion now, the rest doesn't take much
+            m_workingSetInfo = reinterpret_cast<Windows::MEMORY_WORKING_SET_INFORMATION*>(m_workingSetBuffer.data());
+
+            logger->info("[WorkingSetScanner] Time to capture working set: {}ms", watch.Now());
+
+            // Reset state
+            m_lastIndex = 1u;
+            m_doneWithScan = false;
         }
 
-        logger->info("[WorkingSetScanner] Time to capture working set: {}ms", watch.Now());
-        m_nextWorkingSetCacheUpdate = timestamp + WorkingSetUpdateTime;
-
-        // Reset state
-        m_lastIndex = 1u;
-        m_doneWithScan = false;
+        m_nextWorkingSetCacheUpdate = timestamp + WorkingSetUpdateTime;        
     }
 
     if (!m_doneWithScan)
     {
         WalkWorkingSet();
     }
+}
+
+pico::Bool pico::Engine::WorkingSetScanner::UpdateWorkingSet() noexcept
+{
+    EngineThreadLoadGuard guard{};
+
+    const auto currentProcess = GetCurrentProcess();
+
+    pico::Uint32 sizeNeeded{};
+
+    const auto status = Windows::NtQueryVirtualMemory(currentProcess, 0u, Windows::MEMORY_INFORMATION_CLASS::MemoryWorkingSetInformation,
+                                  m_workingSetBuffer.data(), m_workingSetBuffer.size() * sizeof(m_workingSetBuffer[0]),
+                                  sizeNeeded);
+
+    if (!NT_SUCCESS(status))
+    {
+        Logger::GetLogSink()->error("[WorkingSetScanner] Failed to refresh working set buffer, status: {}",
+                           static_cast<pico::Uint32>(status));
+
+        return false;
+    }
+
+    return true;
 }
 
 void pico::Engine::WorkingSetScanner::WalkWorkingSet() noexcept
@@ -46,10 +75,15 @@ void pico::Engine::WorkingSetScanner::WalkWorkingSet() noexcept
 
     auto queryCalls = 0;
 
-    for (pico::Size i = m_lastIndex; i < m_workingSetCache.size(); i++)
+    for (; m_lastIndex < m_workingSetInfo->NumberOfEntries; m_lastIndex++)
     {
-        const auto prevEntry = m_workingSetCache[i - 1u];
-        const auto curEntry = m_workingSetCache[i];
+        if (queryCalls >= MaxVirtualQueryCallsPerPass)
+        {
+            return;
+        }
+
+        const auto prevEntry = m_workingSetInfo->WorkingSetInfo[m_lastIndex - 1u];
+        const auto curEntry = m_workingSetInfo->WorkingSetInfo[m_lastIndex];
 
         // Filter executable pages
         if ((curEntry.Protection & (1u << 1u)) == 0u)
@@ -70,11 +104,6 @@ void pico::Engine::WorkingSetScanner::WalkWorkingSet() noexcept
         MEMORY_BASIC_INFORMATION pageInfo{};
 
         queryCalls++;
-        if (queryCalls >= MaxVirtualQueryCallsPerPass)
-        {
-            m_lastIndex = i;
-            return;
-        }
 
         // Might have deallocated or the like...
         if (!VirtualQuery(pageAddr, &pageInfo, sizeof(pageInfo)))

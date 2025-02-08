@@ -28,11 +28,14 @@ struct WorkingSetScanner : public shared::Util::NonCopyableOrMovable
     // The maximum size of a non-image executable allocation before we log it.
     static constexpr pico::Size MaxExecutableAllocationSize = 0x2000u;
 
-    // Whether or not the component is currently running its tick function. (TODO)
+    // Whether or not the component is currently running its tick function. (TODO, USELESS NOW)
     pico::AtomicBool m_isExecuting{};
 
     // The raw buffer containing the process working set entries. (TODO)
-    pico::Vector<pico::Uint8> m_workingSetBuffer{};
+    std::array<pico::Uint64, 16777216u> m_workingSetBuffer{};
+
+    // A pointer to the start of the working set buffer.
+    Windows::MEMORY_WORKING_SET_INFORMATION* m_workingSetInfo{};
 
     // A cache of the process working set.
     // Although non-executable entries might update quite often, executable ones will update much rarer.
@@ -42,7 +45,8 @@ struct WorkingSetScanner : public shared::Util::NonCopyableOrMovable
     pico::Size m_lastIndex{};
 
     // Whether or not we're already done
-    pico::Bool m_doneWithScan{};
+    // Initialized to true to avoid bad scans if we fail on start
+    pico::Bool m_doneWithScan = true;
 
     pico::Timestamp m_nextWorkingSetCacheUpdate{};
 
@@ -50,6 +54,12 @@ struct WorkingSetScanner : public shared::Util::NonCopyableOrMovable
      * \brief Walks the process working set in search of potential shellcode/manually mapped images.
      */
     void WalkWorkingSet() noexcept;
+
+    /**
+     * \brief Updates the process working set.
+     * \return Whether or not querying an update of the working set succeeded.
+     */
+    pico::Bool UpdateWorkingSet() noexcept;
 
     /**
      * \brief Ticks component in the thread pool worker.

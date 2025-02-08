@@ -90,30 +90,21 @@ pico::Int32 main(pico::Int32 aArgc, pico::Char** aArgv)
         // Note: Should be handled by build system somehow, this is not optimal
         constexpr auto ClientRelativePath = L".\\ACClient.dll";
 
-        std::println("Process started, loading client into process...");
-
         pico::UnicodeString fullPath{};
-
         wil::GetFullPathNameW(ClientRelativePath, fullPath);
-
-        std::println("Client path: {}", pico::shared::Util::ToUTF8(fullPath));
 
         // We do not use proper RAII here for remote alloc (Note: WIL does not provide bindings for VirtualAllocEx),
         // which is a bit of a problem - but whatever
 
         uintptr_t memoryBaseAddress{};
         pico::Size regionSize = fullPath.size();
-
         if (!NT_SUCCESS(Windows::NtAllocateVirtualMemory(procInfo.hProcess, memoryBaseAddress, 0u, regionSize,
                                                          MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE)))
         {
             return 1;
         }
 
-        std::println("Allocation base address: {:#x}", memoryBaseAddress);
-
         pico::Size bytesWritten{};
-
         if (!WriteProcessMemory(procInfo.hProcess, reinterpret_cast<void*>(memoryBaseAddress), fullPath.data(),
                                 (fullPath.size() + 1) * sizeof(pico::WChar), &bytesWritten))
         {
@@ -123,7 +114,6 @@ pico::Int32 main(pico::Int32 aArgc, pico::Char** aArgv)
         // Start new thread with LoadLibraryW as starting point, classic
         // Note that in CS2 the game overlay renderer will hook LoadLibraryExW
         // (probably for anti-cheat/telemetry, just like they hook VirtualAllocEx and VirtualProtectEx)
-
         wil::unique_handle threadHandle{CreateRemoteThread(procInfo.hProcess, nullptr, 0u,
                                                            reinterpret_cast<LPTHREAD_START_ROUTINE>(LoadLibraryW),
                                                            reinterpret_cast<void*>(memoryBaseAddress), 0u, nullptr)};
@@ -133,13 +123,9 @@ pico::Int32 main(pico::Int32 aArgc, pico::Char** aArgv)
             return 1;
         }
 
-        std::println("LoadLibrary thread started!");
-
         // Resume application to let all threads init
         ResumeThread(procInfo.hThread);
-
         wil::handle_wait(threadHandle.get());
-
         // We're done with loading, free the client's path from memory
         // Everything else will be handled by wil
         pico::Size freeSize{};

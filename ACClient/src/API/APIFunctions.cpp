@@ -11,12 +11,6 @@
 #include <Engine/Engine.hpp>
 #include <Shared/Pico.hpp>
 
-/* Call anti-cheat bootstrapping
- * Should only be called once, but we still make sure it is only called once
- *
- * ===================================================================================================
- */
-
 extern "C" _declspec(dllexport) void Pico_Init()
 {
     // Only call this once
@@ -29,15 +23,13 @@ extern "C" _declspec(dllexport) void Pico_Init()
                    });
 }
 
-/* Call this in every frame of the game's main loop
- * NOTE: should not contain any heavy code
- * Schedule tasks on thread pool threads? (logging, various scans...)
- * Check thread pool thread states
- * Re-call various important functions
- *
- * ===================================================================================================
- */
+
 extern "C" _declspec(dllexport) void Pico_PollMainLoop()
 {
     pico::Engine::Engine::Get().Tick();
+}
+
+extern "C" _declspec(dllexport) void Pico_Teardown()
+{
+    pico::Engine::Engine::Get().Teardown();
 }

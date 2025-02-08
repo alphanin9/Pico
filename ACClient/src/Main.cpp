@@ -1,6 +1,7 @@
+#include <API/APIFunctions.hpp>
 #include <DevIntegration/CS2/CS2.hpp>
-#include <DevIntegration/Rust/Rust.hpp>
 #include <DevIntegration/Integration.hpp>
+#include <DevIntegration/Rust/Rust.hpp>
 #include <Shared/Pico.hpp>
 
 namespace pico
@@ -24,16 +25,9 @@ namespace pico
  * This should minimize the performance impact of the anti-cheat main loop callback
  *
  * In a real Production Environment:tm: we also wouldn't really need DllMain
- *
- * ====================================================================================================
  */
 pico::Bool InitializeIntegration()
 {
-    // We use only OutputDebugStringA for integration logger start
-    // Strictly speaking this isn't part of AC
-    // But just something we use to get things going
-    // It'll still be in spdlog registry :(
-
     auto& ctx = Integration::Context::Get();
 
     ctx.m_logger->info("Pico client is loading...");
@@ -74,7 +68,9 @@ pico::Uint32 InitThread(void* aParam)
 BOOL __stdcall DllMain(HMODULE aModule, pico::Uint32 aReason, void* aReserved)
 {
     DisableThreadLibraryCalls(aModule);
-    if (aReason == DLL_PROCESS_ATTACH)
+    switch (aReason)
+    {
+    case DLL_PROCESS_ATTACH:
     {
         // Initialize our integration process
         if (const auto handle = CreateThread(nullptr, 0u, reinterpret_cast<LPTHREAD_START_ROUTINE>(&pico::InitThread),
@@ -82,6 +78,15 @@ BOOL __stdcall DllMain(HMODULE aModule, pico::Uint32 aReason, void* aReserved)
         {
             CloseHandle(handle);
         }
+        break;
+    }
+    case DLL_PROCESS_DETACH:
+    {
+        Pico_Teardown();
+        break;
+    }
+    default:
+        break;
     }
 
     return TRUE;

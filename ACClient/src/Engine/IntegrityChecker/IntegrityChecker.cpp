@@ -506,14 +506,15 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
         // IDK about this
         constexpr pico::Size BigFileSize = 0x1000000;
 
+        // Why does GetImagePtr return bogus values every now and then? Who knows?
         if (moduleEntry.m_modulePeFileData.size() > BigFileSize)
         {
             EngineThreadLoadGuard guard{};
-            status = ScanModule(moduleEntry, shared::PE::GetImagePtr(entry->DllBase), false);
+            status = ScanModule(moduleEntry, reinterpret_cast<shared::PE::Image*>(entry->DllBase), false);
         }
         else
         {
-            status = ScanModule(moduleEntry, shared::PE::GetImagePtr(entry->DllBase), false);
+            status = ScanModule(moduleEntry, reinterpret_cast<shared::PE::Image*>(entry->DllBase), false);
         }
 
         if (status)
