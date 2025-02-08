@@ -6,7 +6,6 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) n
 {
     m_path = aModulePath;
     m_sha256 = shared::Files::GetFileSHA256(aModulePath);
-
     if (m_sha256.empty())
     {
         // This shouldn't happen...
@@ -15,9 +14,10 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) n
 
     static auto& s_engine = Engine::Get();
 
-    s_engine.m_threadsUnderHeavyLoad++;
-    m_isTrusted = shared::EnvironmentIntegrity::VerifyFileTrust(aModulePath);
-    s_engine.m_threadsUnderHeavyLoad--;
+    {
+        EngineThreadLoadGuard _{};
+        m_isTrusted = shared::EnvironmentIntegrity::VerifyFileTrust(aModulePath);
+    }
 
     pico::Path filePath = aModulePath;
 
@@ -65,7 +65,6 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) n
 
     // Reset module data, fill with 0s
     m_modulePeFileData.assign(rawImage->get_nt_headers()->optional_header.size_image, {});
-
     m_sizeOfHeaders = rawImage->get_nt_headers()->optional_header.size_headers;
 
     // Copy PE headers in
@@ -380,7 +379,44 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
         logger->info("[IntegrityChecker] Metrics: scanned funcs {}, surface skimmed: {}", funcCoverage,
                      partialCoverage);
     }
-    return success;
+
+    if (!success)
+    {
+        return false;
+    }
+
+    return ScanImports(aModule, aImage);
+}
+
+pico::Bool pico::Engine::IntegrityChecker::ScanImports(pico::Engine::ModuleData& aModule,
+                                                       pico::shared::PE::Image* aImage) const noexcept
+{
+    // TODO
+    // Need to resolve API sets and stuff - or just use GetModuleHandleA and GetProcAddress and pray they're not hooked
+    // lol
+    const auto importDirectory = aModule.m_image->get_directory(win::directory_entry_import);
+
+    if (!importDirectory)
+    {
+        // Can't argue with that
+        return true;
+    }
+
+    auto importDirectoryTable =
+        reinterpret_cast<win::import_directory_t*>(aModule.m_image->raw_to_ptr(importDirectory->rva));
+
+    while (importDirectoryTable->characteristics)
+    {
+        // auto str = aModule.m_image->raw_to_ptr<pico::Char>(importDirectoryTable->rva_name);
+
+        // Logger::GetLogSink()->info("IAT for {} at {}, unbound: {}", str,
+        //                            aModule.m_image->raw_to_ptr<void>(importDirectoryTable->rva_first_thunk),
+        //                            aModule.m_image->raw_to_ptr<void>(importDirectoryTable->rva_original_first_thunk));
+
+        importDirectoryTable++;
+    }
+
+    return true;
 }
 
 pico::Bool pico::Engine::IntegrityChecker::ScanClient() noexcept

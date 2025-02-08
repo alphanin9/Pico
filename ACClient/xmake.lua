@@ -28,5 +28,6 @@ target("ACClient")
         "zydis"
     )
     add_syslinks("Ntdll", "Kernel32", "Ole32", "User32", "Version")
+    set_policy("build.optimization.lto", true)
 
 add_rules("plugin.vsxmake.autoupdate")

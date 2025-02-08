@@ -98,6 +98,16 @@ struct IntegrityChecker : public shared::Util::NonCopyableOrMovable
      */
     pico::Bool ScanModule(pico::Engine::ModuleData& aModule, pico::shared::PE::Image* aImage,
                           pico::Bool aIsClient) const noexcept;
+    
+    /**
+     * \brief Validates a module's import address table (IAT).
+     *
+     * \param aModule The module representation from disk.
+     * \param aImage The module representation in memory.
+     * \param aIsClient Is the module our client?
+     * \return Whether or not the module's imports were tampered with.
+     */
+    pico::Bool ScanImports(pico::Engine::ModuleData& aModule, pico::shared::PE::Image* aImage) const noexcept;
 
     /**
      * \brief Scans the client module for integrity.

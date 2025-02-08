@@ -1,4 +1,4 @@
-add_requires("lazy_importer", "openssl")
+add_requires("lazy_importer", "picosha2")
 
 target("ACShared")
     set_kind("static")
@@ -13,15 +13,15 @@ target("ACShared")
     add_packages(
         "hopscotch-map", 
         "lazy_importer", 
-        "openssl", 
-        "simdutf", 
-        "tiltedcore", 
-        "wil", 
+        "picosha2",
+        "simdutf",
+        "tiltedcore",
+        "wil",
         "zydis"
     )
 
     add_syslinks("Kernel32", "Ncrypt", "Ntdll", "User32", "Version", "Wintrust")
-
     set_pcxxheader("src/Shared/Pico.hpp")
+    set_policy("build.optimization.lto", true)
 
 add_rules("plugin.vsxmake.autoupdate")

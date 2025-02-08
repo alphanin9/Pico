@@ -1,32 +1,7 @@
 #include <Shared/Util/FsUtils.hpp>
 #include <Shared/Util/NtdllCalls.hpp>
 
-#include <openssl/evp.h>
-
-namespace Detail
-{
-struct EVPContextFree
-{
-    void operator()(void* ptr)
-    {
-        EVP_MD_CTX_free((EVP_MD_CTX*)ptr);
-    }
-};
-
-template<typename T>
-using EVPUniquePtr = std::unique_ptr<T, EVPContextFree>;
-
-struct OpenSSLFree
-{
-    void operator()(void* aPtr)
-    {
-        CRYPTO_free(aPtr, nullptr, 0);
-    }
-};
-
-template<typename T>
-using OpenSSLUniquePtr = std::unique_ptr<T, OpenSSLFree>;
-} // namespace Detail
+#include <picosha2.h>
 
 pico::UnicodeString pico::shared::Files::GetFullDriverFilePath(pico::UnicodeStringView aPath) noexcept
 {
@@ -59,55 +34,51 @@ pico::UnicodeString pico::shared::Files::GetFullDriverFilePath(pico::UnicodeStri
 
 pico::String pico::shared::Files::GetFileSHA256(pico::UnicodeStringView aPath) noexcept
 {
-    std::error_code ec{};
+    auto [fileHandle, error] = wil::try_open_file(aPath.data());
 
-    const auto size = std::filesystem::file_size(aPath, ec);
-
-    if (ec)
+    if (error)
     {
         return {};
     }
 
-    pico::Vector<pico::Uint8> fileContent(size, {});
-    std::ifstream file(aPath.data(), std::ios::binary);
+    LARGE_INTEGER fileSize{};
 
-    if (!file.good())
+    if (!GetFileSizeEx(fileHandle.get(), &fileSize))
     {
         return {};
     }
 
-    file.read(reinterpret_cast<char*>(fileContent.data()), size);
+    wil::unique_handle fileMapping{CreateFileMappingA(fileHandle.get(), nullptr, PAGE_READONLY, 0u, 0u, nullptr)};
 
-    Detail::EVPUniquePtr<EVP_MD_CTX> evpContext{EVP_MD_CTX_new()};
-
-    if (!evpContext)
+    if (!fileMapping)
     {
         return {};
     }
 
-    if (!EVP_DigestInit_ex(evpContext.get(), EVP_sha256(), nullptr))
+    wil::unique_mapview_ptr mapView{MapViewOfFile(fileMapping.get(), FILE_MAP_READ, 0u, 0u, 0u)};
+
+    if (!mapView)
     {
         return {};
     }
 
-    if (!EVP_DigestUpdate(evpContext.get(), fileContent.data(), fileContent.size()))
+    auto begin = reinterpret_cast<pico::Uint8*>(mapView.get());
+    auto end = begin + fileSize.QuadPart;
+
+    std::array<pico::Uint8, picosha2::k_digest_size> buffer{};
+
+    picosha2::hash256(begin, end, buffer);
+
+    pico::String out{};
+    out.reserve(picosha2::k_digest_size * 2u);
+
+    constexpr pico::Char HexAlphabet[] = "0123456789ABCDEF";
+
+    for (const auto byte : buffer)
     {
-        return {};
+        out.push_back(HexAlphabet[(byte >> 4) & 0xF]);
+        out.push_back(HexAlphabet[byte & 0xF]);
     }
 
-    std::array<pico::Uint8, EVP_MAX_MD_SIZE> hashStackBuffer{};
-
-    pico::Uint32 hashLength{};
-
-    if (!EVP_DigestFinal_ex(evpContext.get(), hashStackBuffer.data(), &hashLength))
-    {
-        return {};
-    }
-
-    Detail::OpenSSLUniquePtr<pico::Char> sslStr{OPENSSL_buf2hexstr(hashStackBuffer.data(), hashLength)};
-
-    // Explicitly copy the string
-    pico::String str = sslStr.get();
-
-    return str;
+    return out;
 }
