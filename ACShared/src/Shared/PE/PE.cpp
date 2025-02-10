@@ -1,6 +1,5 @@
 #include <Shared/PE/PE.hpp>
 #include <Shared/ProcessEnv/ProcessEnv.hpp>
-#include <print>
 
 pico::shared::PE::Image* pico::shared::PE::GetImagePtr(_In_ void* const aPtrInImage) noexcept
 {
