@@ -1,3 +1,4 @@
+#include <Engine/InstrumentationCallbacks/InstrumentationCallbacks.hpp>
 #include <Engine/Logging/Logger.hpp>
 #include <Engine/WorkingSetWatch/WorkingSetWatch.hpp>
 
@@ -38,6 +39,8 @@ void pico::Engine::WorkingSetWatcher::Tick() noexcept
 
     auto& logger = Logger::GetLogSink();
 
+    static const auto& s_instrumentationCallbacks = InstrumentationCallbacks::Get();
+
     // A note: the old thread check was pointless, as nt!PspQueryWorkingSetWatch will filter out any page faults with
     // kernel mode addresses - and RPM/WPM will incur page faults in kernel mode for obvious reasons
     for (auto i = 0u; i < faultCount; i++)
@@ -48,7 +51,8 @@ void pico::Engine::WorkingSetWatcher::Tick() noexcept
         RtlPcToFileHeader(entry.FaultingPc, reinterpret_cast<PVOID*>(&image));
 
         // OK, this is weird...
-        if (!image)
+        if (!image &&
+            !s_instrumentationCallbacks.IsCodeInInstrumentationCallback(reinterpret_cast<uintptr_t>(entry.FaultingPc)))
         {
             logger->warn("[WorkingSetWatch] Thread {} had bad RIP {} cause a page fault at addr {}",
                          entry.FaultingThreadId, entry.FaultingPc, entry.FaultingVa);

@@ -65,14 +65,11 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
     // Code holder for instrumentation callback logic
     asmjit::CodeHolder m_callbackCodeHolder{};
 
-    // Code holder for the spin loop
-    asmjit::CodeHolder m_loopCodeHolder{};
-
     // Pointer to assembled callback
     void* m_callback{};
-
-    // Pointer to assembled loop
-    void* m_loop{};
+    
+    // Size of assembled callback for detection functions
+    pico::Size m_sizeOfCallback{};
 
     // Neither should cause reentrancy, so we're fine!
     // You can't do stuff before TLS kicks in, so no - we're not fine!
@@ -88,12 +85,6 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
      * \param aAssembler The assembler the function will use to emit instructions.
      */
     void AssembleInstrumentationCallback(asmjit::x86::Assembler& aAssembler) noexcept;
-
-    /**
-     * \brief Assembles a loop that does nothing for tearing down the instrumentation callback stub.
-     * \param aAssembler The assembler the function will use to emit instructions.
-     */
-    void AssembleBusyLoop(asmjit::x86::Assembler& aAssembler) noexcept;
 
     /**
      * \brief Setup the instrumentation callback stub.
@@ -125,6 +116,21 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
      * application will have interesting crashes during exit.
      */
     void Teardown() noexcept;
+
+    /**
+     * \brief Checks whether or not unbacked code belongs to our instrumentation callback.
+     * \param aRip The instruction pointer.
+     * \return Whether or not the code belongs to us.
+     */
+    pico::Bool IsCodeInInstrumentationCallback(uintptr_t aRip) const noexcept;
+
+    /**
+     * \brief Checks if the given allocation has been made by our JIT allocator.
+     * 
+     * \param aAddress The address of the presumed allocation.
+     * \return Whether or not the allocation is owned by our allocator.
+     */
+    pico::Bool IsAddressAllocatedByJITAllocator(uintptr_t aAddress) const noexcept;
 
     /**
      * \brief Get an instance of the instrumentation callbacks handler.

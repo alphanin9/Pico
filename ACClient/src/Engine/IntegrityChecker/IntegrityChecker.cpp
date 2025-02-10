@@ -11,13 +11,7 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) n
         // This shouldn't happen...
         return false;
     }
-
-    static auto& s_engine = Engine::Get();
-
-    {
-        EngineThreadLoadGuard _{};
-        m_isTrusted = shared::EnvironmentIntegrity::VerifyFileTrust(aModulePath);
-    }
+    m_isTrusted = shared::EnvironmentIntegrity::VerifyFileTrust(aModulePath);
 
     pico::Path filePath = aModulePath;
 
@@ -44,7 +38,7 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) n
     }
 
     // Note: Use two vectors instead, one for the raw file content, one for the actual PE file
-    // Note: we read it two times due to SHA256 calc, should probably fix it
+    // Note: we read it two times due to SHA256 calc, should probably fix it - or create a file mapping instead
     pico::Vector<pico::Uint8> rawPeData(fileSize, {});
 
     std::ifstream file(filePath, std::ios::binary);
@@ -133,10 +127,6 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
                                                       pico::shared::PE::Image* aImage,
                                                       pico::Bool aIsClientModule) const noexcept
 {
-    // Very blanket, IDK how it'll work out in practice
-    // Integrity checking is VERY expensive no matter how you play it
-    EngineThreadLoadGuard guard{};
-
     static auto& s_engine = Engine::Get();
     auto& logger = Logger::GetLogSink();
 
@@ -459,6 +449,13 @@ pico::Bool pico::Engine::IntegrityChecker::ScanClient() noexcept
 
 void pico::Engine::IntegrityChecker::Tick() noexcept
 {
+    // Very blanket, IDK how it'll work out in practice
+    // Integrity checking is VERY expensive no matter how you play it
+    // Additionally, we will scan the client every time
+    EngineThreadLoadGuard guard{};
+
+    shared::Util::MsTaken time{};
+
     constexpr pico::Seconds LoadedModuleListReportInterval{60};
     constexpr pico::Seconds ModuleIntegrityCheckInterval{20};
 
@@ -575,6 +572,8 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
     {
         m_moduleDataMap.erase(i);
     }
+
+    logger->info("[IntegrityChecker] Metrics: Time taken to run tick: {}ms", time.Now());
 }
 
 pico::Engine::IntegrityChecker& pico::Engine::IntegrityChecker::Get() noexcept

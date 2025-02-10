@@ -152,23 +152,10 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(
     aAssembler.int3();
 }
 
-void pico::Engine::InstrumentationCallbacks::AssembleBusyLoop(asmjit::x86::Assembler& aAssembler) noexcept
-{
-    const auto labelEntry = aAssembler.newNamedLabel("JumpDest");
-
-    aAssembler.bind(labelEntry);
-    aAssembler.pause();
-    aAssembler.jmp(labelEntry);
-
-    // WTF?
-    aAssembler.int3();
-}
-
 void pico::Engine::InstrumentationCallbacks::SetupInstrumentationCallback() noexcept
 {
     // Set the code holder up
     m_callbackCodeHolder.init(m_jit.environment(), m_jit.cpuFeatures());
-    m_loopCodeHolder.init(m_jit.environment(), m_jit.cpuFeatures());
 
     asmjit::StringLogger callbackLogger{};
 
@@ -185,24 +172,12 @@ void pico::Engine::InstrumentationCallbacks::SetupInstrumentationCallback() noex
     // Assemble
     AssembleInstrumentationCallback(callbackAssembler);
 
-    asmjit::StringLogger loopLogger{};
-
-    m_loopCodeHolder.setErrorHandler(&reporter);
-    m_loopCodeHolder.setLogger(&loopLogger);
-
-    asmjit::x86::Assembler loopAssembler(&m_loopCodeHolder);
-
-    loopAssembler.setErrorHandler(&reporter);
-
-    AssembleBusyLoop(loopAssembler);
-
     const auto errCallback = m_jit.add(&m_callback, &m_callbackCodeHolder);
-    const auto errLoop = m_jit.add(&m_loop, &m_loopCodeHolder);
+    m_sizeOfCallback = m_callbackCodeHolder.codeSize();
 
     // Note: callback asm code should also be hashed and periodically compared
     // Maybe regenerate callback once in a while as well?
     Logger::GetLogSink()->info("[Asmjit] JIT callback stub: \n{}", callbackLogger.data());
-    Logger::GetLogSink()->info("[Asmjit] JIT loop stub: \n{}", loopLogger.data());
 
     if (errCallback)
     {
@@ -211,14 +186,7 @@ void pico::Engine::InstrumentationCallbacks::SetupInstrumentationCallback() noex
         return;
     }
 
-    if (errLoop)
-    {
-        Logger::GetLogSink()->error("[Asmjit] Failed to assemble busy loop! Error: {}",
-                                    asmjit::DebugUtils::errorAsString(errLoop));
-        return;
-    }
-
-    Logger::GetLogSink()->info("[Instrumentation] Instrumentation callback pointer at {}, loop pointer: {}", m_callback, m_loop);
+    Logger::GetLogSink()->info("[Instrumentation] Instrumentation callback pointer at {}", m_callback);
 }
 
 void pico::Engine::InstrumentationCallbacks::TickMainThread() noexcept
@@ -321,6 +289,19 @@ void pico::Engine::InstrumentationCallbacks::Teardown() noexcept
                                      &info, sizeof(info));
 
     // TODO: rest of this
+}
+
+pico::Bool pico::Engine::InstrumentationCallbacks::IsCodeInInstrumentationCallback(uintptr_t aRip) const noexcept
+{
+    const auto callbackAsUintptr = reinterpret_cast<uintptr_t>(m_callback);
+    return aRip >= callbackAsUintptr && aRip <= (callbackAsUintptr + m_sizeOfCallback);
+}
+
+pico::Bool pico::Engine::InstrumentationCallbacks::IsAddressAllocatedByJITAllocator(uintptr_t aAddress) const noexcept
+{
+    // Technically vulnerable, but a reverser can have fun reversing asmjit stuff
+    asmjit::JitAllocator::Span _{};
+    return m_jit.allocator()->query(_, reinterpret_cast<void*>(aAddress)) == asmjit::ErrorCode::kErrorOk;
 }
 
 void pico::Engine::InstrumentationCallbacks::OnLdrInitializeThunk(pico::Uint64 aThreadStartAddress) noexcept

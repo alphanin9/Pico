@@ -1,5 +1,6 @@
 #include <Shared/PE/PE.hpp>
 #include <Shared/ProcessEnv/ProcessEnv.hpp>
+#include <print>
 
 pico::shared::PE::Image* pico::shared::PE::GetImagePtr(_In_ void* const aPtrInImage) noexcept
 {
@@ -10,6 +11,7 @@ pico::shared::PE::Image* pico::shared::PE::GetImagePtr(_In_ void* const aPtrInIm
 
     pico::shared::PE::Image* peFileHeader{};
 
+    // Note: this fails sometimes, look into it, maybe it's a concurrency issue?
     ProcessEnv::EnumerateLoadedModules(
         [&peFileHeader, aPtrInImage](Windows::LDR_DATA_TABLE_ENTRY* aEntry)
         {
@@ -212,6 +214,41 @@ pico::String pico::shared::PE::GetImagePDBPath(_In_ const pico::shared::PE::Imag
     if (!IsImageValid(aImage))
     {
         return {};
+    }
+
+    const auto debugDirectoryInfo = aImage->get_directory(win::directory_entry_debug);
+
+    if (!debugDirectoryInfo)
+    {
+        return {};
+    }
+
+    const auto debugDirectory = aImage->raw_to_ptr<win::debug_directory_t>(debugDirectoryInfo->rva);
+
+    for (auto i = 0u; i < (debugDirectoryInfo->size / sizeof(win::debug_directory_entry_t)); i++)
+    {
+        auto& entry = debugDirectory->entries[i];
+
+        if (entry.type != win::debug_directory_type_id::codeview)
+        {
+            continue;
+        }
+
+        const auto header = aImage->raw_to_ptr<win::cv_header_t>(entry.rva_raw_data);
+
+        if (header->signature != win::cv_signature::pdb70)
+        {
+            continue;
+        }
+
+        const auto pdbData = aImage->raw_to_ptr<win::cv_pdb70_t>(entry.rva_raw_data);
+
+        // Char list length is zero here
+        const auto textSize = entry.size_raw_data - sizeof(win::cv_pdb70_t);
+
+        pico::String ret{&pdbData->pdb_name[0], &pdbData->pdb_name[textSize]};
+
+        return ret;
     }
 
     // TODO

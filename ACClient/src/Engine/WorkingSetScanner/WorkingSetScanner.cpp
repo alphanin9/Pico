@@ -1,4 +1,5 @@
 #include <Engine/Engine.hpp>
+#include <Engine/InstrumentationCallbacks/InstrumentationCallbacks.hpp>
 #include <Engine/Logging/Logger.hpp>
 #include <Engine/WorkingSetScanner/WorkingSetScanner.hpp>
 
@@ -35,7 +36,7 @@ void pico::Engine::WorkingSetScanner::Tick() noexcept
             m_doneWithScan = false;
         }
 
-        m_nextWorkingSetCacheUpdate = timestamp + WorkingSetUpdateTime;        
+        m_nextWorkingSetCacheUpdate = timestamp + WorkingSetUpdateTime;
     }
 
     if (!m_doneWithScan)
@@ -48,23 +49,31 @@ pico::Bool pico::Engine::WorkingSetScanner::UpdateWorkingSet() noexcept
 {
     EngineThreadLoadGuard guard{};
 
+    constexpr auto AttemptCountBeforeAdmittingFailure = 8u;
+
     const auto currentProcess = GetCurrentProcess();
 
     pico::Uint32 sizeNeeded{};
-
-    const auto status = Windows::NtQueryVirtualMemory(currentProcess, 0u, Windows::MEMORY_INFORMATION_CLASS::MemoryWorkingSetInformation,
-                                  m_workingSetBuffer.data(), m_workingSetBuffer.size() * sizeof(m_workingSetBuffer[0]),
-                                  sizeNeeded);
-
-    if (!NT_SUCCESS(status))
+    // ...maybe the buffer needs to be paged in or something? Walking over a million uint64_ts WILL hurt
+    for (auto i = 0u; i < AttemptCountBeforeAdmittingFailure; i++)
     {
-        Logger::GetLogSink()->error("[WorkingSetScanner] Failed to refresh working set buffer, status: {}",
-                           static_cast<pico::Uint32>(status));
+        const auto status = Windows::NtQueryVirtualMemory(
+            currentProcess, 0u, Windows::MEMORY_INFORMATION_CLASS::MemoryWorkingSetInformation,
+            m_workingSetBuffer.data(), m_workingSetBuffer.size() * sizeof(m_workingSetBuffer[0]), sizeNeeded);
 
-        return false;
+        if (!NT_SUCCESS(status))
+        {
+            Logger::GetLogSink()->error("[WorkingSetScanner] Failed to refresh working set buffer, status: {}",
+                                        static_cast<pico::Uint32>(status));
+
+            continue;
+        }
+
+        Logger::GetLogSink()->info("[WorkingSetScanner] Attempts before succeeding: {}", i + 1u);
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 void pico::Engine::WorkingSetScanner::WalkWorkingSet() noexcept
@@ -115,15 +124,21 @@ void pico::Engine::WorkingSetScanner::WalkWorkingSet() noexcept
         if (!shared::MemoryEnv::IsProtectionExecutable(pageInfo.Protect) ||
             !shared::MemoryEnv::IsProtectionExecutable(pageInfo.AllocationProtect))
         {
-            logger->warn("[WorkingSetScanner] Execution status at page {} has been altered! Protection: {:#x}, alloc protect: {:#x}, "
+            logger->warn("[WorkingSetScanner] Execution status at page {} has been altered! Protection: {:#x}, alloc "
+                         "protect: {:#x}, "
                          "page type: {:#x}, base address: {}, size: {:#x}",
                          pageAddr, pageInfo.Protect, pageInfo.AllocationProtect, pageInfo.Type, pageInfo.BaseAddress,
                          pageInfo.RegionSize);
         }
 
-        if (pageInfo.Type != MEM_IMAGE && pageInfo.RegionSize >= MaxExecutableAllocationSize)
+        static const auto& s_instrumentationCallbacks = InstrumentationCallbacks::Get();
+
+        // Queries asmjit allocator more than strictly necessary, but we don't care
+        if (pageInfo.Type != MEM_IMAGE && pageInfo.RegionSize >= MaxExecutableAllocationSize &&
+            !s_instrumentationCallbacks.IsAddressAllocatedByJITAllocator(curEntry.VirtualPage * 0x1000))
         {
-            logger->error("[WorkingSetScanner] Executable addr {} is not image and is big! Protection: {:#x}, alloc protect: {:#x}, page "
+            logger->error("[WorkingSetScanner] Executable addr {} is not image and is big! Protection: {:#x}, alloc "
+                          "protect: {:#x}, page "
                           "type: {:#x}, "
                           "size: {:#x}, base address: {}, state: {:#x}",
                           pageAddr, pageInfo.Protect, pageInfo.AllocationProtect, pageInfo.Type, pageInfo.RegionSize,
