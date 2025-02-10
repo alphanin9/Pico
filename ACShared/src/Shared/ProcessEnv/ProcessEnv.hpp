@@ -37,8 +37,9 @@ pico::Vector<Windows::LDR_DATA_TABLE_ENTRY*> GetLoadedModuleList() noexcept;
 
 /**
  * \brief Enumerates loaded modules. If the module with a case-insensitive FNV1a64 hash of aHash is present, returns a
- * pointer to it. \param aHash A case-insensitive FNV1a64 hash of the desired module's file name. \returns The pointer
- * to the specified module if it's loaded. If the module is not loaded, returns nullptr.
+ * pointer to it.
+ * \param aHash A case-insensitive FNV1a64 hash of the desired module's file name.
+ * \returns The pointer to the specified module if it's loaded. If the module is not loaded, returns nullptr.
  */
 Windows::LDR_DATA_TABLE_ENTRY* GetModuleByHash(pico::Uint64 aHash) noexcept;
 
@@ -61,6 +62,8 @@ inline void EnumerateLoadedModules(Fn&& aCallback) noexcept
 {
     static const auto s_peb = GetProcessEnvironment();
 
+    EnterCriticalSection(reinterpret_cast<LPCRITICAL_SECTION>(s_peb->LoaderLock));
+
     // Iterate over loaded modules
     for (auto entry = s_peb->Ldr->InMemoryOrderModuleList.Flink; entry != s_peb->Ldr->InMemoryOrderModuleList.Blink;
          entry = entry->Flink)
@@ -73,11 +76,14 @@ inline void EnumerateLoadedModules(Fn&& aCallback) noexcept
             break;
         }
     }
+
+    LeaveCriticalSection(reinterpret_cast<LPCRITICAL_SECTION>(s_peb->LoaderLock));
 }
 
 /**
  * \brief Get a vector of the current process's threads. Could be extended to provide similar capabilities for other
- * processes. Note that this is not particularly fast. \return A vector of structs describing the current process's
+ * processes. Note that this is not particularly fast.
+ * \return A vector of structs describing the current process's
  * owned threads. Note that a thread might exit between gathering and returning.
  */
 pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION> GetCurrentProcessThreads() noexcept;
