@@ -13,7 +13,7 @@
 #include <DevIntegration/Integration.hpp>
 
 #include <Engine/Specific/CS2/CS2.hpp>
-void pico::Engine::Engine::Tick() noexcept
+void pico::Engine::Engine::Tick()
 {
     if (!m_canExecute)
     {
@@ -81,7 +81,7 @@ void pico::Engine::Engine::Tick() noexcept
     m_jobState = (m_jobState + 1) % MaxJobStates;
 }
 
-void pico::Engine::Engine::TickMainThreadJobs() noexcept
+void pico::Engine::Engine::TickMainThreadJobs()
 {
     // Modulos for timestamp counter to check things
     constexpr auto ThreadPoolCheck = 0x51Cu;
@@ -105,7 +105,7 @@ void pico::Engine::Engine::TickMainThreadJobs() noexcept
     InstrumentationCallbacks::Get().TickMainThread();
 }
 
-pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept
+pico::Bool pico::Engine::Engine::IsThreadPoolOK()
 {
     static auto& s_threadPool = ThreadPool::Get();
     auto& logger = Logger::GetLogSink();
@@ -185,7 +185,7 @@ pico::Bool pico::Engine::Engine::IsThreadPoolOK() noexcept
     return true;
 }
 
-void pico::Engine::Engine::Setup() noexcept
+void pico::Engine::Engine::Setup()
 {
     if (m_canExecute)
     {
@@ -243,7 +243,7 @@ void pico::Engine::Engine::Setup() noexcept
     m_canExecute = true;
 }
 
-void pico::Engine::Engine::SetupModuleData() noexcept
+void pico::Engine::Engine::SetupModuleData()
 {
     // Get module base
     RtlPcToFileHeader(pico::Engine::Engine::Get, &m_moduleBase);
@@ -276,7 +276,7 @@ void pico::Engine::Engine::SetupModuleData() noexcept
     m_maximumUMAddress = basicInfo.MaximumUserModeAddress;
 }
 
-void pico::Engine::Engine::Teardown() noexcept
+void pico::Engine::Engine::Teardown()
 {
     m_canExecute = false;
 
@@ -287,19 +287,19 @@ void pico::Engine::Engine::Teardown() noexcept
     instrumentationCallbacks.Teardown();
 }
 
-pico::Engine::Engine& pico::Engine::Engine::Get() noexcept
+pico::Engine::Engine& pico::Engine::Engine::Get()
 {
     static Engine s_instance{};
 
     return s_instance;
 }
 
-pico::Engine::EngineThreadLoadGuard::EngineThreadLoadGuard() noexcept
+pico::Engine::EngineThreadLoadGuard::EngineThreadLoadGuard()
 {
     Engine::Get().m_threadsUnderHeavyLoad++;
 }
 
-pico::Engine::EngineThreadLoadGuard::~EngineThreadLoadGuard() noexcept
+pico::Engine::EngineThreadLoadGuard::~EngineThreadLoadGuard()
 {
     Engine::Get().m_threadsUnderHeavyLoad--;
 }

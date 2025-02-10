@@ -10,5 +10,5 @@ namespace pico::shared::SystemEnv
  * \return A vector of every open handle at the time of calling. If the function failed for any reason, returns an empty
  * vector.
  */
-pico::Vector<Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX> GetHandleTable() noexcept;
+pico::Vector<Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX> GetHandleTable();
 } // namespace pico::shared::SystemEnv

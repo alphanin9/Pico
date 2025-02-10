@@ -46,7 +46,7 @@ struct ModuleData
      * \param aBaseAddress The base address of the loaded module.
      * \return Whether or not loading failed.
      */
-    pico::Bool Load(pico::UnicodeStringView aPath) noexcept;
+    pico::Bool Load(pico::UnicodeStringView aPath);
 
     /**
      * \brief Applies relocations to the module data based on image relocation information.
@@ -54,12 +54,12 @@ struct ModuleData
      * \param aBaseAddress The base address the integrity checked image was loaded at.
      * \return Whether or not relocating the image succeeded.
      */
-    pico::Bool RelocateImage(void* aBaseAddress) noexcept;
+    pico::Bool RelocateImage(void* aBaseAddress);
 
     /**
      * \brief Dumps the module information to the logger. In production, this should be sent to the backend.
      */
-    void DumpModuleInfo() noexcept;
+    void DumpModuleInfo();
 };
 
 /**
@@ -97,8 +97,8 @@ struct IntegrityChecker : public shared::Util::NonCopyableOrMovable
      * \return Whether or not the module was tampered with.
      */
     pico::Bool ScanModule(pico::Engine::ModuleData& aModule, pico::shared::PE::Image* aImage,
-                          pico::Bool aIsClient) const noexcept;
-    
+                          pico::Bool aIsClient) const;
+
     /**
      * \brief Validates a module's import address table (IAT).
      *
@@ -107,7 +107,7 @@ struct IntegrityChecker : public shared::Util::NonCopyableOrMovable
      * \param aIsClient Is the module our client?
      * \return Whether or not the module's imports were tampered with.
      */
-    pico::Bool ScanImports(pico::Engine::ModuleData& aModule, pico::shared::PE::Image* aImage) const noexcept;
+    pico::Bool ScanImports(pico::Engine::ModuleData& aModule, pico::shared::PE::Image* aImage) const;
 
     /**
      * \brief Scans the client module for integrity.
@@ -117,17 +117,17 @@ struct IntegrityChecker : public shared::Util::NonCopyableOrMovable
      *
      * \return Whether or not the client had integrity check failures.
      */
-    pico::Bool ScanClient() noexcept;
+    pico::Bool ScanClient();
 
     /**
      * \brief Ticks component in the thread pool worker.
      */
-    void Tick() noexcept;
+    void Tick();
 
     /**
      * \brief Get a singleton instance of the integrity checker.
      * \return A singleton instance of the integrity checker.
      */
-    static IntegrityChecker& Get() noexcept;
+    static IntegrityChecker& Get();
 };
 } // namespace pico::Engine

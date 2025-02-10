@@ -67,7 +67,7 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
 
     // Pointer to assembled callback
     void* m_callback{};
-    
+
     // Size of assembled callback for detection functions
     pico::Size m_sizeOfCallback{};
 
@@ -84,59 +84,59 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
      * \brief Assembles the instrumentation callback's JIT stub.
      * \param aAssembler The assembler the function will use to emit instructions.
      */
-    void AssembleInstrumentationCallback(asmjit::x86::Assembler& aAssembler) noexcept;
+    void AssembleInstrumentationCallback(asmjit::x86::Assembler& aAssembler);
 
     /**
      * \brief Setup the instrumentation callback stub.
      */
-    void SetupInstrumentationCallback() noexcept;
+    void SetupInstrumentationCallback();
 
     /**
      * \brief Apply the instrumentation callback. If not initialized yet, assemble the instrumentation callback.
      */
-    void TickMainThread() noexcept;
+    void TickMainThread();
 
     /**
      * \brief Ticks the component in the thread pool. Analyzes new results of the callbacks.
      */
-    void Tick() noexcept;
+    void Tick();
 
     /**
      * \brief Analyzes the records of new threads created.
      */
-    void UpdateThreads() noexcept;
+    void UpdateThreads();
 
     /**
      * \brief Analyzes the records of new exceptions.
      */
-    void UpdateExceptions() noexcept;
+    void UpdateExceptions();
 
     /**
      * \brief Attempts to disable the instrumentation callback. This is necessary, as otherwise the protected
      * application will have interesting crashes during exit.
      */
-    void Teardown() noexcept;
+    void Teardown();
 
     /**
      * \brief Checks whether or not unbacked code belongs to our instrumentation callback.
      * \param aRip The instruction pointer.
      * \return Whether or not the code belongs to us.
      */
-    pico::Bool IsCodeInInstrumentationCallback(uintptr_t aRip) const noexcept;
+    pico::Bool IsCodeInInstrumentationCallback(uintptr_t aRip) const;
 
     /**
      * \brief Checks if the given allocation has been made by our JIT allocator.
-     * 
+     *
      * \param aAddress The address of the presumed allocation.
      * \return Whether or not the allocation is owned by our allocator.
      */
-    pico::Bool IsAddressAllocatedByJITAllocator(uintptr_t aAddress) const noexcept;
+    pico::Bool IsAddressAllocatedByJITAllocator(uintptr_t aAddress) const;
 
     /**
      * \brief Get an instance of the instrumentation callbacks handler.
      * \return A singleton instance of the instrumentation callbacks handler.
      */
-    static InstrumentationCallbacks& Get() noexcept;
+    static InstrumentationCallbacks& Get();
 
     // Callback handlers
 
@@ -145,7 +145,7 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
      * constraints. Code has to not use TLS.
      * \param aThreadStartAddress The start address of the new thread.
      */
-    static void OnLdrInitializeThunk(pico::Uint64 aThreadStartAddress) noexcept;
+    static void OnLdrInitializeThunk(pico::Uint64 aThreadStartAddress);
 
     /**
      * \brief Instrumentation callback for exceptions raised in our process context. No particular re-entrancy
@@ -153,20 +153,19 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
      * \param aExceptionInfo The exception record describing the exception.
      * \param aContext The thread context at the moment of the exception.
      */
-    static void OnKiUserExceptionDispatcher(Windows::EXCEPTION_RECORD* aExceptionInfo,
-                                            Windows::CONTEXT* aContext) noexcept;
+    static void OnKiUserExceptionDispatcher(Windows::EXCEPTION_RECORD* aExceptionInfo, Windows::CONTEXT* aContext);
 
     /**
      * \brief Instrumentation callback for APCs received for our process. Unknown re-entrancy constraints.
      * \param aCtx The instrumentation callback's acquired context.
      */
-    static void OnKiUserApcDispatcher(Windows::CONTEXT* aCtx) noexcept;
+    static void OnKiUserApcDispatcher(Windows::CONTEXT* aCtx);
 
     /**
      * \brief Instrumentation callback for unknown calls (no specific handler). Can be a system call or something we
      * missed. Cannot do more system calls.
      * \param aCtx The instrumentation callback's acquired context.
      */
-    static void OnUnknownInstrumentationCallback(Windows::CONTEXT* aCtx) noexcept;
+    static void OnUnknownInstrumentationCallback(Windows::CONTEXT* aCtx);
 };
 } // namespace pico::Engine

@@ -2,7 +2,7 @@
 #include <Engine/HandleSnap/HandleSnap.hpp>
 #include <Engine/Logging/Logger.hpp>
 
-void pico::Engine::HandleSnap::Tick() noexcept
+void pico::Engine::HandleSnap::Tick()
 {
     static const auto s_localPid =
         static_cast<pico::Uint32>(shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
@@ -94,7 +94,7 @@ void pico::Engine::HandleSnap::Tick() noexcept
 }
 
 void pico::Engine::HandleSnap::OnProcessHandleCheck(const Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX& aEntry,
-                                                    const wil::unique_handle& aOwner) noexcept
+                                                    const wil::unique_handle& aOwner)
 {
     constexpr auto CheckedMask = PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE;
 
@@ -128,13 +128,14 @@ void pico::Engine::HandleSnap::OnProcessHandleCheck(const Windows::SYSTEM_HANDLE
         pico::UnicodeString procName{};
         wil::QueryFullProcessImageNameW(aOwner.get(), 0u, procName);
 
-        logger->warn("[HandleSnap] Process {} (PID {}) has a potentially dangerous process handle ({}, access: {}) open to us!",
-                     shared::Util::ToUTF8(procName), pid, aEntry.HandleValue, aEntry.GrantedAccess);
+        logger->warn(
+            "[HandleSnap] Process {} (PID {}) has a potentially dangerous process handle ({}, access: {}) open to us!",
+            shared::Util::ToUTF8(procName), pid, aEntry.HandleValue, aEntry.GrantedAccess);
     }
 }
 
 void pico::Engine::HandleSnap::OnThreadHandleCheck(const Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX& aEntry,
-                                                   const wil::unique_handle& aOwner) noexcept
+                                                   const wil::unique_handle& aOwner)
 {
     constexpr auto CheckedMask = THREAD_TERMINATE | THREAD_SUSPEND_RESUME | THREAD_SET_CONTEXT | THREAD_GET_CONTEXT;
 
@@ -167,12 +168,13 @@ void pico::Engine::HandleSnap::OnThreadHandleCheck(const Windows::SYSTEM_HANDLE_
         pico::UnicodeString procName{};
         wil::QueryFullProcessImageNameW(aOwner.get(), 0u, procName);
 
-        logger->warn("[HandleSnap] Process {} (PID {}) has a potentially dangerous thread handle ({}, access: {}) open to us!",
-                     shared::Util::ToUTF8(procName), pid, aEntry.HandleValue, aEntry.GrantedAccess);
+        logger->warn(
+            "[HandleSnap] Process {} (PID {}) has a potentially dangerous thread handle ({}, access: {}) open to us!",
+            shared::Util::ToUTF8(procName), pid, aEntry.HandleValue, aEntry.GrantedAccess);
     }
 }
 
-pico::Engine::HandleSnap& pico::Engine::HandleSnap::Get() noexcept
+pico::Engine::HandleSnap& pico::Engine::HandleSnap::Get()
 {
     static HandleSnap s_instance{};
 

@@ -95,14 +95,9 @@ template<>
 struct string_maker<pico::UnicodeString>
 {
     HRESULT make(_In_reads_opt_(length) PCWSTR source, size_t length) WI_NOEXCEPT
-    try
     {
         m_value = source ? pico::UnicodeString(source, length) : pico::UnicodeString(length, L'\0');
         return S_OK;
-    }
-    catch (...)
-    {
-        return E_OUTOFMEMORY;
     }
 
     wchar_t* buffer()
@@ -156,7 +151,7 @@ inline void* operator new(size_t size)
     return pico::Alloc(size);
 }
 
-inline void operator delete(void* p) noexcept
+inline void operator delete(void* p)
 {
     pico::Free(p);
 }
@@ -166,37 +161,37 @@ inline void* operator new[](size_t size)
     return pico::Alloc(size);
 }
 
-inline void operator delete[](void* p) noexcept
+inline void operator delete[](void* p)
 {
     pico::Free(p);
 }
 
-inline void* operator new(size_t size, const std::nothrow_t&) noexcept
+inline void* operator new(size_t size, const std::nothrow_t&)
 {
     return pico::Alloc(size);
 }
 
-inline void* operator new[](size_t size, const std::nothrow_t&) noexcept
+inline void* operator new[](size_t size, const std::nothrow_t&)
 {
     return pico::Alloc(size);
 }
 
-inline void operator delete(void* p, const std::nothrow_t&) noexcept
+inline void operator delete(void* p, const std::nothrow_t&)
 {
     pico::Free(p);
 }
 
-inline void operator delete[](void* p, const std::nothrow_t&) noexcept
+inline void operator delete[](void* p, const std::nothrow_t&)
 {
     pico::Free(p);
 }
 
-inline void operator delete(void* p, size_t) noexcept
+inline void operator delete(void* p, size_t)
 {
     pico::Free(p);
 }
 
-inline void operator delete[](void* p, size_t) noexcept
+inline void operator delete[](void* p, size_t)
 {
     pico::Free(p);
 }

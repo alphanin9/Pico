@@ -1,8 +1,5 @@
 #include <Shared/EnvironmentIntegrity/SignatureVerifier.hpp>
 
-#include <Softpub.h>
-#include <WinTrust.h>
-
 namespace Detail
 {
 /**
@@ -10,7 +7,7 @@ namespace Detail
  *
  * \param aData A pointer to the WINTRUST_DATA structure.
  */
-void CloseWintrustDataDriver(WINTRUST_DATA* aData) noexcept
+void CloseWintrustDataDriver(WINTRUST_DATA* aData)
 {
     static GUID policy = DRIVER_ACTION_VERIFY;
 
@@ -26,8 +23,7 @@ void CloseWintrustDataDriver(WINTRUST_DATA* aData) noexcept
  * \param aIsDriver Whether or not this call will verify a driver.
  * \param aIsCatalog Whether this call will verify a catalog or a file.
  */
-void SetupGeneralWintrustStructure(WINTRUST_DATA& aData, pico::Bool aIsDriver = false,
-                                   pico::Bool aIsCatalog = false) noexcept
+void SetupGeneralWintrustStructure(WINTRUST_DATA& aData, pico::Bool aIsDriver = false, pico::Bool aIsCatalog = false)
 {
     aData.cbStruct = sizeof(WINTRUST_DATA);
     aData.dwUIChoice = WTD_UI_NONE;
@@ -54,7 +50,7 @@ static GUID s_defaultPolicy = WINTRUST_ACTION_GENERIC_VERIFY_V2;
 } // namespace Detail
 
 pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrustFromCatalog(pico::UnicodeStringView aPath,
-                                                                          EFileType aType) noexcept
+                                                                          EFileType aType)
 {
     auto& policy = aType == EFileType::Other ? Detail::s_defaultPolicy : Detail::s_driverPolicy;
 
@@ -149,7 +145,7 @@ pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrustFromCatalog(pico::
     return hadMatchingCatalogs;
 }
 
-pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrust(pico::UnicodeStringView aPath, EFileType aType) noexcept
+pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrust(pico::UnicodeStringView aPath, EFileType aType)
 {
     WINTRUST_FILE_INFO fileInfo{};
 

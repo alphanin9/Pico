@@ -1,6 +1,6 @@
 #include <Shared/EnvironmentIntegrity/SecureBoot.hpp>
 
-pico::shared::EnvironmentIntegrity::SecureBootConfig pico::shared::EnvironmentIntegrity::GetSecureBootConfig() noexcept
+pico::shared::EnvironmentIntegrity::SecureBootConfig pico::shared::EnvironmentIntegrity::GetSecureBootConfig()
 {
     SecureBootConfig config{};
     pico::Uint32 sizeWritten{};
@@ -11,8 +11,7 @@ pico::shared::EnvironmentIntegrity::SecureBootConfig pico::shared::EnvironmentIn
     return config;
 }
 
-pico::shared::EnvironmentIntegrity::MeasuredBootData pico::shared::EnvironmentIntegrity::
-    GetLastMeasuredBootData() noexcept
+pico::shared::EnvironmentIntegrity::MeasuredBootData pico::shared::EnvironmentIntegrity::GetLastMeasuredBootData()
 {
     // TODO
     return {};

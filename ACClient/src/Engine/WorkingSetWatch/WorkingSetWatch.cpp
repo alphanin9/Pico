@@ -2,7 +2,7 @@
 #include <Engine/Logging/Logger.hpp>
 #include <Engine/WorkingSetWatch/WorkingSetWatch.hpp>
 
-void pico::Engine::WorkingSetWatcher::Tick() noexcept
+void pico::Engine::WorkingSetWatcher::Tick()
 {
     if (!m_initialized)
     {
@@ -60,7 +60,7 @@ void pico::Engine::WorkingSetWatcher::Tick() noexcept
     }
 }
 
-pico::Engine::WorkingSetWatcher& pico::Engine::WorkingSetWatcher::Get() noexcept
+pico::Engine::WorkingSetWatcher& pico::Engine::WorkingSetWatcher::Get()
 {
     static WorkingSetWatcher s_instance{};
 

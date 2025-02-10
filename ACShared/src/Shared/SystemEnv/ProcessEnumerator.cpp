@@ -1,6 +1,6 @@
 #include <Shared/SystemEnv/ProcessEnumerator.hpp>
 
-pico::Bool pico::shared::SystemEnv::FillSystemProcessInformationBuffer(pico::Vector<pico::Uint8>& aBuffer) noexcept
+pico::Bool pico::shared::SystemEnv::FillSystemProcessInformationBuffer(pico::Vector<pico::Uint8>& aBuffer)
 {
     constexpr pico::Size MinimumBufferSize = 0x4000u;
 

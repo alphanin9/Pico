@@ -34,7 +34,7 @@ struct ContextFrame
  * At the moment this won't be too effective at catching code running in hook
  *
  * Additionally, VirtualQuery of 512 potential vaddrs will be slow - even with heuristics
- * 
+ *
  * Note: this can also scan stacks obtained from other sources
  */
 struct ContextScanner : public shared::Util::NonCopyableOrMovable
@@ -53,23 +53,23 @@ struct ContextScanner : public shared::Util::NonCopyableOrMovable
     /**
      * \brief Tick component in main thread.
      */
-    void TickMainThread() noexcept;
+    void TickMainThread();
 
     /**
      * \brief Ticks component in thread pool worker thread.
      */
-    void Tick() noexcept;
+    void Tick();
 
     /**
      * \brief Locks the mutex and pushes a frame to the context frame list.
      * \param aFrame A reference to a shared ptr of a filled context frame.
      */
-    void PushFrame(pico::SharedPtr<ContextFrame>& aFrame) noexcept;
+    void PushFrame(pico::SharedPtr<ContextFrame>& aFrame);
 
     /**
      * \brief Get a singleton instance of the context scanner.
      * \return A singleton instance of the context scanner.
      */
-    static ContextScanner& Get() noexcept;
+    static ContextScanner& Get();
 };
 } // namespace pico::Engine

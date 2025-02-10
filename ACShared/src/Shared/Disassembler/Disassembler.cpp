@@ -21,7 +21,7 @@ struct InstructionData
      * \param aRet Where the instruction data will be placed.
      * \return Whether or not decoding succeeded.
      */
-    static pico::Bool Get(uintptr_t aAddr, ZydisDecoder& aDecoder, InstructionData& aRet) noexcept
+    static pico::Bool Get(uintptr_t aAddr, ZydisDecoder& aDecoder, InstructionData& aRet)
     {
         // No, Zydis, instructions *can* be longer than 15 bytes - evidently
         const auto ret = (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&aDecoder, reinterpret_cast<void*>(aAddr), 64u,
@@ -39,14 +39,14 @@ struct InstructionData
      * \brief Did we disassemble alright and are we constructed properly?
      * \return Whether or not the instruction data is valid.
      */
-    pico::Bool IsValid() const noexcept
+    pico::Bool IsValid() const
     {
         return m_addr != 0u;
     }
 
     InstructionData() = default;
 
-    InstructionData(ZydisDecoder& aDecoder, uintptr_t aAddr) noexcept
+    InstructionData(ZydisDecoder& aDecoder, uintptr_t aAddr)
     {
         Get(aAddr, aDecoder, *this);
     }
@@ -134,8 +134,9 @@ EResolution GetNextForAddressStack(ZydisDecoder& aDecoder, uintptr_t aCurrent, u
 }
 } // namespace Detail
 
-pico::shared::Disassembler::EJumpFollowState pico::shared::Disassembler::FollowJumpChain(
-    uintptr_t aAddress, uintptr_t& aResult, pico::Size& aSizeOfInstruction) noexcept
+pico::shared::Disassembler::EJumpFollowState pico::shared::Disassembler::FollowJumpChain(uintptr_t aAddress,
+                                                                                         uintptr_t& aResult,
+                                                                                         pico::Size& aSizeOfInstruction)
 {
     ZydisDecoder decoder{};
 

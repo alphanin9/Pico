@@ -6,7 +6,7 @@ namespace pico::shared::Util
 {
 /**
  * \brief Aligns a number down to aAlignment.
- * 
+ *
  * \tparam NumType The type of the number and alignment.
  * \param aNum The number.
  * \param aAlignment The desired alignment.

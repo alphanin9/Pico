@@ -53,7 +53,7 @@ public:
 
     constexpr RawFunc() = default;
 
-    operator bool() const noexcept
+    operator bool() const
     {
         return GetPtr() != nullptr;
     }
@@ -68,17 +68,17 @@ public:
         return GetOriginalPtr();
     }
 
-    [[nodiscard]] inline Callable GetPtr() const noexcept
+    [[nodiscard]] inline Callable GetPtr() const
     {
         return reinterpret_cast<Callable>(GetAddress());
     }
 
-    [[nodiscard]] inline Callable GetOriginalPtr() const noexcept
+    [[nodiscard]] inline Callable GetOriginalPtr() const
     {
         return reinterpret_cast<Callable>(GetOriginalAddress());
     }
 
-    inline static uintptr_t GetAddress() noexcept
+    inline static uintptr_t GetAddress()
     {
         if (!original)
         {
@@ -88,7 +88,7 @@ public:
         return address;
     }
 
-    inline static uintptr_t GetOriginalAddress() noexcept
+    inline static uintptr_t GetOriginalAddress()
     {
         if (!original)
         {
@@ -98,14 +98,14 @@ public:
         return original;
     }
 
-    inline static void ResetAddress() noexcept
+    inline static void ResetAddress()
     {
         original = Target.Resolve();
 
         address = original;
     }
 
-    inline static void SetAddress(uintptr_t aAddress) noexcept
+    inline static void SetAddress(uintptr_t aAddress)
     {
         if (!original)
         {
@@ -182,7 +182,7 @@ public:
 
     constexpr RawPtr() = default;
 
-    operator bool() const noexcept
+    operator bool() const
     {
         return GetPtr() != nullptr;
     }
@@ -228,23 +228,23 @@ public:
         return GetPtr()[aIndex];
     }
 
-    RawPtr& operator=(T&& aRhs) const noexcept
+    RawPtr& operator=(T&& aRhs) const
     {
         *GetPtr() = aRhs;
         return *this;
     }
 
-    [[nodiscard]] inline T* GetPtr() const noexcept
+    [[nodiscard]] inline T* GetPtr() const
     {
         return reinterpret_cast<T*>(GetAddress());
     }
 
-    [[nodiscard]] inline T& GetRef() const noexcept
+    [[nodiscard]] inline T& GetRef() const
     {
         return *reinterpret_cast<T*>(GetAddress());
     }
 
-    inline static uintptr_t GetAddress() noexcept
+    inline static uintptr_t GetAddress()
     {
         static uintptr_t addr = Target.Resolve();
 
@@ -308,24 +308,24 @@ public:
         return GetValuePtr();
     }
 
-    OffsetPtr& operator=(T&& aRhs) const noexcept
+    OffsetPtr& operator=(T&& aRhs) const
     {
         *GetPtr() = aRhs;
         return *this;
     }
 
-    const OffsetPtr& operator=(const T& aRhs) const noexcept
+    const OffsetPtr& operator=(const T& aRhs) const
     {
         *GetPtr() = aRhs;
         return *this;
     }
 
-    [[nodiscard]] inline T* GetPtr() const noexcept
+    [[nodiscard]] inline T* GetPtr() const
     {
         return reinterpret_cast<T*>(GetAddress());
     }
 
-    [[nodiscard]] inline Type* GetValuePtr() const noexcept
+    [[nodiscard]] inline Type* GetValuePtr() const
     {
         if constexpr (indirect)
         {
@@ -337,7 +337,7 @@ public:
         }
     }
 
-    [[nodiscard]] inline uintptr_t GetAddress() const noexcept
+    [[nodiscard]] inline uintptr_t GetAddress() const
     {
         return address;
     }

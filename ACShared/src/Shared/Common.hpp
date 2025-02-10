@@ -29,14 +29,14 @@
 #include <Windows.h>
 
 // Crypto and signature verification
-#include <wincrypt.h>
-#include <mscat.h>
-#include <ncrypt.h>
-
 #include <SoftPub.h>
 #include <WinTrust.h>
+#include <mscat.h>
+#include <ncrypt.h>
+#include <wincrypt.h>
 
 // WIL
+// Note: this HAS to be 1st
 #include <wil/stl.h>
 #include <wil/filesystem.h>
 #include <wil/resource.h>

@@ -526,4 +526,4 @@ typedef struct _THREAD_NAME_INFORMATION
     // A Unicode string that specifies the description of the thread.
     UNICODE_STRING ThreadName;
 } THREAD_NAME_INFORMATION, *PTHREAD_NAME_INFORMATION;
-}
+} // namespace Windows

@@ -30,8 +30,7 @@ public:
 pico::Engine::InstrumentationCallbacks* m_globalPtr{};
 } // namespace Detail
 
-void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(
-    asmjit::x86::Assembler& aAssembler) noexcept
+void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asmjit::x86::Assembler& aAssembler)
 {
     // While we could just import them, I'm not sure it'd work properly
     // This does
@@ -152,7 +151,7 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(
     aAssembler.int3();
 }
 
-void pico::Engine::InstrumentationCallbacks::SetupInstrumentationCallback() noexcept
+void pico::Engine::InstrumentationCallbacks::SetupInstrumentationCallback()
 {
     // Set the code holder up
     m_callbackCodeHolder.init(m_jit.environment(), m_jit.cpuFeatures());
@@ -189,7 +188,7 @@ void pico::Engine::InstrumentationCallbacks::SetupInstrumentationCallback() noex
     Logger::GetLogSink()->info("[Instrumentation] Instrumentation callback pointer at {}", m_callback);
 }
 
-void pico::Engine::InstrumentationCallbacks::TickMainThread() noexcept
+void pico::Engine::InstrumentationCallbacks::TickMainThread()
 {
     if (!m_isInitialized)
     {
@@ -210,13 +209,13 @@ void pico::Engine::InstrumentationCallbacks::TickMainThread() noexcept
     }
 }
 
-void pico::Engine::InstrumentationCallbacks::Tick() noexcept
+void pico::Engine::InstrumentationCallbacks::Tick()
 {
     UpdateThreads();
     UpdateExceptions();
 }
 
-void pico::Engine::InstrumentationCallbacks::UpdateThreads() noexcept
+void pico::Engine::InstrumentationCallbacks::UpdateThreads()
 {
     // No deep analysis just yet...
     // The assumption is that
@@ -256,7 +255,7 @@ void pico::Engine::InstrumentationCallbacks::UpdateThreads() noexcept
     m_newThreadRecordCount = 0;
 }
 
-void pico::Engine::InstrumentationCallbacks::UpdateExceptions() noexcept
+void pico::Engine::InstrumentationCallbacks::UpdateExceptions()
 {
     auto& logger = Logger::GetLogSink();
 
@@ -271,16 +270,16 @@ void pico::Engine::InstrumentationCallbacks::UpdateExceptions() noexcept
     // Note: this could take a while with exception hooking in play
     for (auto& record : m_exceptionRecords)
     {
-        
     }
 
     m_exceptionRecords.clear();
 }
 
-void pico::Engine::InstrumentationCallbacks::Teardown() noexcept
+void pico::Engine::InstrumentationCallbacks::Teardown()
 {
     // Unset callback
-    // It turns out we might not need to spin after all - internally kernel sets some lock when setting/unsetting IC, it seems
+    // It turns out we might not need to spin after all - internally kernel sets some lock when setting/unsetting IC, it
+    // seems
     Windows::PROCESS_INSTRUMENTATION_CALLBACK_INFORMATION info{};
 
     info.Callback = nullptr;
@@ -291,20 +290,20 @@ void pico::Engine::InstrumentationCallbacks::Teardown() noexcept
     // TODO: rest of this
 }
 
-pico::Bool pico::Engine::InstrumentationCallbacks::IsCodeInInstrumentationCallback(uintptr_t aRip) const noexcept
+pico::Bool pico::Engine::InstrumentationCallbacks::IsCodeInInstrumentationCallback(uintptr_t aRip) const
 {
     const auto callbackAsUintptr = reinterpret_cast<uintptr_t>(m_callback);
     return aRip >= callbackAsUintptr && aRip <= (callbackAsUintptr + m_sizeOfCallback);
 }
 
-pico::Bool pico::Engine::InstrumentationCallbacks::IsAddressAllocatedByJITAllocator(uintptr_t aAddress) const noexcept
+pico::Bool pico::Engine::InstrumentationCallbacks::IsAddressAllocatedByJITAllocator(uintptr_t aAddress) const
 {
     // Technically vulnerable, but a reverser can have fun reversing asmjit stuff
     asmjit::JitAllocator::Span _{};
     return m_jit.allocator()->query(_, reinterpret_cast<void*>(aAddress)) == asmjit::ErrorCode::kErrorOk;
 }
 
-void pico::Engine::InstrumentationCallbacks::OnLdrInitializeThunk(pico::Uint64 aThreadStartAddress) noexcept
+void pico::Engine::InstrumentationCallbacks::OnLdrInitializeThunk(pico::Uint64 aThreadStartAddress)
 {
     NewThreadRecord record{.m_threadStartAddress = aThreadStartAddress, .m_threadId = shared::ProcessEnv::GetTID()};
 
@@ -320,7 +319,7 @@ void pico::Engine::InstrumentationCallbacks::OnLdrInitializeThunk(pico::Uint64 a
 }
 
 void pico::Engine::InstrumentationCallbacks::OnKiUserExceptionDispatcher(Windows::EXCEPTION_RECORD* aRecord,
-                                                                         Windows::CONTEXT* aContext) noexcept
+                                                                         Windows::CONTEXT* aContext)
 {
     ExceptionRecord record{.m_record = *aRecord, .m_threadId = shared::ProcessEnv::GetTID(), .m_rip = aContext->Rip};
 
@@ -335,17 +334,17 @@ void pico::Engine::InstrumentationCallbacks::OnKiUserExceptionDispatcher(Windows
     Detail::m_globalPtr->m_exceptionRecords.push_back(std::move(record));
 }
 
-void pico::Engine::InstrumentationCallbacks::OnKiUserApcDispatcher(Windows::CONTEXT*) noexcept
+void pico::Engine::InstrumentationCallbacks::OnKiUserApcDispatcher(Windows::CONTEXT*)
 {
     // Currently ignored, unsure on how to analyze
 }
 
-void pico::Engine::InstrumentationCallbacks::OnUnknownInstrumentationCallback(Windows::CONTEXT*) noexcept
+void pico::Engine::InstrumentationCallbacks::OnUnknownInstrumentationCallback(Windows::CONTEXT*)
 {
     // Currently ignored, lots of CPU time and very tight constraints
 }
 
-pico::Engine::InstrumentationCallbacks& pico::Engine::InstrumentationCallbacks::Get() noexcept
+pico::Engine::InstrumentationCallbacks& pico::Engine::InstrumentationCallbacks::Get()
 {
     static InstrumentationCallbacks s_instance{};
 

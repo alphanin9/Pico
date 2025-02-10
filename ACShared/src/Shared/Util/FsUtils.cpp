@@ -3,7 +3,7 @@
 
 #include <picosha2.h>
 
-pico::UnicodeString pico::shared::Files::GetFullDriverFilePath(pico::UnicodeStringView aPath) noexcept
+pico::UnicodeString pico::shared::Files::GetFullDriverFilePath(pico::UnicodeStringView aPath)
 {
     Windows::UNICODE_STRING str{};
 
@@ -32,7 +32,7 @@ pico::UnicodeString pico::shared::Files::GetFullDriverFilePath(pico::UnicodeStri
     return pathBuffer;
 }
 
-pico::String pico::shared::Files::GetFileSHA256(pico::UnicodeStringView aPath) noexcept
+pico::String pico::shared::Files::GetFileSHA256(pico::UnicodeStringView aPath)
 {
     auto [fileHandle, error] = wil::try_open_file(aPath.data());
 

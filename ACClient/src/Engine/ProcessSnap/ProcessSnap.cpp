@@ -2,7 +2,7 @@
 #include <Engine/Logging/Logger.hpp>
 #include <Engine/ProcessSnap/ProcessSnap.hpp>
 
-pico::Engine::ThreadInformation::ThreadInformation(Windows::SYSTEM_EXTENDED_THREAD_INFORMATION* aThread) noexcept
+pico::Engine::ThreadInformation::ThreadInformation(Windows::SYSTEM_EXTENDED_THREAD_INFORMATION* aThread)
     : m_threadId(reinterpret_cast<pico::Uint32>(aThread->ThreadInfo.ClientId.UniqueThread))
     , m_userTime(aThread->ThreadInfo.UserTime.QuadPart)
     , m_kernelTime(aThread->ThreadInfo.KernelTime.QuadPart)
@@ -16,7 +16,7 @@ pico::Engine::ThreadInformation::ThreadInformation(Windows::SYSTEM_EXTENDED_THRE
 
 pico::Engine::ProcessInformation::ProcessInformation(
     Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION* aProc,
-    const pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION*>& aThreads) noexcept
+    const pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION*>& aThreads)
     : m_processId(reinterpret_cast<pico::Uint32>(aProc->UniqueProcessId))
     , m_sessionId(aProc->SessionId)
 {
@@ -41,7 +41,7 @@ pico::Engine::ProcessInformation::ProcessInformation(
     }
 }
 
-void pico::Engine::ProcessSnap::Tick() noexcept
+void pico::Engine::ProcessSnap::Tick()
 {
     const auto now = Clock::now();
 
@@ -101,7 +101,7 @@ void pico::Engine::ProcessSnap::Tick() noexcept
     m_isDone = true;
 }
 
-pico::Engine::ProcessSnap& pico::Engine::ProcessSnap::Get() noexcept
+pico::Engine::ProcessSnap& pico::Engine::ProcessSnap::Get()
 {
     static ProcessSnap s_instance{};
 

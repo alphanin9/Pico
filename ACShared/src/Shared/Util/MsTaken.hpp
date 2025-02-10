@@ -12,8 +12,8 @@ struct MsTaken : pico::shared::Util::NonCopyableOrMovable
 {
     pico::Timestamp m_start{};
 
-    MsTaken() noexcept;
+    MsTaken();
 
-    pico::Uint64 Now() const noexcept;
+    pico::Uint64 Now() const;
 };
 } // namespace pico::shared::Util

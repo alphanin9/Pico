@@ -1,8 +1,8 @@
-#include <Shared/Pico.hpp>
-#include <DevIntegration/SafetyHookDriver.hpp>
 #include <DevIntegration/Context.hpp>
+#include <DevIntegration/SafetyHookDriver.hpp>
+#include <Shared/Pico.hpp>
 
-pico::Bool pico::Integration::SafetyHookDriver::Attach(uintptr_t aAddy, void* aDetour) noexcept
+pico::Bool pico::Integration::SafetyHookDriver::Attach(uintptr_t aAddy, void* aDetour)
 {
     Context::Get().m_logger->info("Attempting to attach hook at {:#x}", aAddy);
     auto hook = safetyhook::create_inline(reinterpret_cast<void*>(aAddy), aDetour);
@@ -19,7 +19,7 @@ pico::Bool pico::Integration::SafetyHookDriver::Attach(uintptr_t aAddy, void* aD
     return true;
 }
 
-pico::Bool pico::Integration::SafetyHookDriver::Attach(uintptr_t aAddy, void* aDetour, void** aOriginal) noexcept
+pico::Bool pico::Integration::SafetyHookDriver::Attach(uintptr_t aAddy, void* aDetour, void** aOriginal)
 {
     Context::Get().m_logger->info("Attempting to attach hook at {:#x}", aAddy);
     auto hook = safetyhook::create_inline(reinterpret_cast<void*>(aAddy), aDetour);
@@ -38,25 +38,25 @@ pico::Bool pico::Integration::SafetyHookDriver::Attach(uintptr_t aAddy, void* aD
     return true;
 }
 
-pico::Bool pico::Integration::SafetyHookDriver::Detach(uintptr_t aAddy) noexcept
+pico::Bool pico::Integration::SafetyHookDriver::Detach(uintptr_t aAddy)
 {
     if (!m_hookDataMap.contains(aAddy))
     {
         return false;
     }
-    
+
     // Safetyhook inline hook destructor should take care of detaching
-    // In theory, we should be holding onto the hook for as long as possible to optimize 
+    // In theory, we should be holding onto the hook for as long as possible to optimize
     // But I don't think we will ever be detaching
     m_hookDataMap.erase(aAddy);
 
     return true;
 }
 
-pico::Size pico::Integration::SafetyHookDriver::GetPatchSize(uintptr_t aAddy) noexcept
+pico::Size pico::Integration::SafetyHookDriver::GetPatchSize(uintptr_t aAddy)
 {
-    // Note: assuming we're integrity checking functions 
-    // in a sane way (either from start of .text or looking at exception directory), 
+    // Note: assuming we're integrity checking functions
+    // in a sane way (either from start of .text or looking at exception directory),
     // we should always hit the start of our patch
     if (!m_hookDataMap.contains(aAddy))
     {

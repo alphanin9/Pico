@@ -3,7 +3,7 @@
 #include <Engine/Logging/Logger.hpp>
 #include <Engine/ThreadPool/ThreadPool.hpp>
 
-void pico::Engine::ContextScanner::TickMainThread() noexcept
+void pico::Engine::ContextScanner::TickMainThread()
 {
     static const auto& s_engine = Engine::Get();
     static const auto& s_threadPool = ThreadPool::Get();
@@ -111,7 +111,7 @@ void pico::Engine::ContextScanner::TickMainThread() noexcept
     PushFrame(frame);
 }
 
-void pico::Engine::ContextScanner::Tick() noexcept
+void pico::Engine::ContextScanner::Tick()
 {
     static const auto& engine = Engine::Get();
 
@@ -166,7 +166,8 @@ void pico::Engine::ContextScanner::Tick() noexcept
 
                 if (!peImage)
                 {
-                    logger->error("[ContextScanner] Executable page of memory ({}, base {}) does not have associated PE file, is this "
+                    logger->error("[ContextScanner] Executable page of memory ({}, base {}) does not have associated "
+                                  "PE file, is this "
                                   "JIT or manual map/shellcode?",
                                   addy, info.AllocationBase);
                     continue;
@@ -176,7 +177,8 @@ void pico::Engine::ContextScanner::Tick() noexcept
 
                 if (FAILED(wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(peImage), moduleName)))
                 {
-                    logger->error("[ContextScanner] Failed to get name of module {}!", reinterpret_cast<void*>(peImage));
+                    logger->error("[ContextScanner] Failed to get name of module {}!",
+                                  reinterpret_cast<void*>(peImage));
                     continue;
                 }
 
@@ -189,14 +191,14 @@ void pico::Engine::ContextScanner::Tick() noexcept
     m_scannedFrames.clear();
 }
 
-void pico::Engine::ContextScanner::PushFrame(pico::SharedPtr<ContextFrame>& aFrame) noexcept
+void pico::Engine::ContextScanner::PushFrame(pico::SharedPtr<ContextFrame>& aFrame)
 {
     std::unique_lock lock(m_contextScannerMutex);
 
     m_receivedFrames.push_back(aFrame);
 }
 
-pico::Engine::ContextScanner& pico::Engine::ContextScanner::Get() noexcept
+pico::Engine::ContextScanner& pico::Engine::ContextScanner::Get()
 {
     static ContextScanner s_instance{};
 

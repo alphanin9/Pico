@@ -1,8 +1,7 @@
 #include <Shared/EnvironmentIntegrity/DriverPaths.hpp>
 #include <Shared/Util/FsUtils.hpp>
 
-pico::Vector<pico::shared::EnvironmentIntegrity::DriverInfo> pico::shared::EnvironmentIntegrity::
-    GetLoadedDriverPaths() noexcept
+pico::Vector<pico::shared::EnvironmentIntegrity::DriverInfo> pico::shared::EnvironmentIntegrity::GetLoadedDriverPaths()
 {
     /* The more documented approach of using EnumDeviceDrivers + GetDeviceDriverFileNameW no longer works
      * due to Win11 24H2 requiring debug privilege to get driver image base and GetDeviceDriverFileNameW

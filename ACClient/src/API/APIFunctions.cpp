@@ -16,13 +16,8 @@ extern "C" _declspec(dllexport) void Pico_Init()
     // Only call this once
     static std::once_flag s_initialized{};
 
-    std::call_once(s_initialized,
-                   []()
-                   {
-                       pico::Engine::Engine::Get().Setup();
-                   });
+    std::call_once(s_initialized, []() { pico::Engine::Engine::Get().Setup(); });
 }
-
 
 extern "C" _declspec(dllexport) void Pico_PollMainLoop()
 {

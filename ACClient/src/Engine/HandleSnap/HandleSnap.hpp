@@ -32,7 +32,7 @@ struct HandleSnap : public shared::Util::NonCopyableOrMovable
     /**
      * \brief Tick component in thread pool.
      */
-    void Tick() noexcept;
+    void Tick();
 
     /**
      * \brief Called when a process handle needs to be checked in the tick function's handle enumeration.
@@ -41,7 +41,7 @@ struct HandleSnap : public shared::Util::NonCopyableOrMovable
      * \param aOwner The owner of the handle in question.
      */
     void OnProcessHandleCheck(const Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX& aEntry,
-                              const wil::unique_handle& aOwner) noexcept;
+                              const wil::unique_handle& aOwner);
 
     /**
      * \brief Called when a thread handle needs to be checked in the tick function's handle enumeration.
@@ -50,12 +50,12 @@ struct HandleSnap : public shared::Util::NonCopyableOrMovable
      * \param aOwner The owner of the handle in question.
      */
     void OnThreadHandleCheck(const Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX& aEntry,
-                             const wil::unique_handle& aOwner) noexcept;
+                             const wil::unique_handle& aOwner);
 
     /**
      * \brief Get a singleton instance of the integrity checker.
      * \return A singleton instance of the integrity checker.
      */
-    static HandleSnap& Get() noexcept;
+    static HandleSnap& Get();
 };
 } // namespace pico::Engine

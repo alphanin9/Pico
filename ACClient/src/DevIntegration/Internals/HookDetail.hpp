@@ -32,7 +32,7 @@ struct HookResult
     {
     }
 
-    constexpr operator bool() const noexcept
+    constexpr operator bool() const
     {
         return success;
     }
@@ -83,24 +83,22 @@ struct HookTraits : HookTraits<TRaw, decltype(&TCallback::operator())>
 };
 
 template<template<auto, auto, typename> class TRaw, auto TModuleName, auto TSignature, typename TRawRet,
-         typename... TRawArgs, typename TContext,
-         typename TCallbackRet, typename... TCallbackArgs>
+         typename... TRawArgs, typename TContext, typename TCallbackRet, typename... TCallbackArgs>
 struct HookTraits<TRaw<TModuleName, TSignature, TRawRet (*)(TRawArgs...)>, TCallbackRet (TContext::*)(TCallbackArgs...)>
     : HookTraits<TRaw<TModuleName, TSignature, TRawRet (*)(TRawArgs...)>, TCallbackRet (*)(TCallbackArgs...)>
 {
 };
 
 template<template<auto, auto, typename> class TRaw, auto TModuleName, auto TSignature, typename TRawRet,
-         typename... TRawArgs, typename TContext,
-         typename TCallbackRet, typename... TCallbackArgs>
+         typename... TRawArgs, typename TContext, typename TCallbackRet, typename... TCallbackArgs>
 struct HookTraits<TRaw<TModuleName, TSignature, TRawRet (*)(TRawArgs...)>,
                   TCallbackRet (TContext::*)(TCallbackArgs...) const>
     : HookTraits<TRaw<TModuleName, TSignature, TRawRet (*)(TRawArgs...)>, TCallbackRet (*)(TCallbackArgs...)>
 {
 };
 
-template<template<auto, auto, typename> class TRaw, auto TModuleName, auto TSignature, typename TRawRet, typename... TRawArgs,
-         typename TCallbackRet, typename... TCallbackArgs>
+template<template<auto, auto, typename> class TRaw, auto TModuleName, auto TSignature, typename TRawRet,
+         typename... TRawArgs, typename TCallbackRet, typename... TCallbackArgs>
     requires std::is_void_v<TRawRet>
 struct HookTraits<TRaw<TModuleName, TSignature, TRawRet (*)(TRawArgs...)>, TCallbackRet (*)(TCallbackArgs...)>
 {
@@ -119,8 +117,7 @@ struct HookTraits<TRaw<TModuleName, TSignature, TRawRet (*)(TRawArgs...)>, TCall
 };
 
 template<template<auto, auto, typename> class TRaw, auto TModuleName, auto TSignature, typename TRawRet,
-         typename... TRawArgs,
-         typename TCallbackRet, typename... TCallbackArgs>
+         typename... TRawArgs, typename TCallbackRet, typename... TCallbackArgs>
     requires(!std::is_void_v<TRawRet>)
 struct HookTraits<TRaw<TModuleName, TSignature, TRawRet (*)(TRawArgs...)>, TCallbackRet (*)(TCallbackArgs...)>
 {
@@ -348,8 +345,8 @@ private:
 template<typename TRaw, typename TWrapper, HookFlow TFlow = HookFlow::Original, HookRun TRun = HookRun::Default>
 class HookHandler;
 
-template<template<auto, auto, typename> class TRaw, auto TModuleName, auto TSignature, typename TRet, typename... TArgs, typename TWrapper,
-         HookFlow TFlow, HookRun TRun>
+template<template<auto, auto, typename> class TRaw, auto TModuleName, auto TSignature, typename TRet, typename... TArgs,
+         typename TWrapper, HookFlow TFlow, HookRun TRun>
 class HookHandler<TRaw<TModuleName, TSignature, TRet (*)(TArgs...)>, TWrapper, TFlow, TRun>
 {
 public:

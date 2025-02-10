@@ -15,14 +15,16 @@ namespace pico::shared::SystemEnv
  *
  * \return Whether or not filling the buffer succeeded.
  */
-pico::Bool FillSystemProcessInformationBuffer(pico::Vector<pico::Uint8>& aBuffer) noexcept;
+pico::Bool FillSystemProcessInformationBuffer(pico::Vector<pico::Uint8>& aBuffer);
 
 /**
  * \brief Enumerates system processes.
- * 
- * \tparam Fn Function type. Specification is not required. Signature is void(Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION*, const pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION*>&);
- * 
- * \param aCallbackFunc Function to call upon process. 
+ *
+ * \tparam Fn Function type. Specification is not required. Signature is
+ * void(Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION*, const
+ * pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION*>&);
+ *
+ * \param aCallbackFunc Function to call upon process.
  */
 template<typename Fn>
 void EnumerateRunningProcesses(Fn&& aCallbackFunc)

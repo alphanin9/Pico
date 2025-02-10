@@ -29,7 +29,7 @@ void pico::Integration::CS2::OnReflexVulkan(void* aRcx)
     Pico_PollMainLoop();
 }
 
-pico::Bool pico::Integration::CS2::InitCS2() noexcept
+pico::Bool pico::Integration::CS2::InitCS2()
 {
     const auto isDX11 = static_cast<pico::Bool>(shared::ProcessEnv::GetModuleByName("rendersystemdx11.dll"));
     const auto isVulkan = static_cast<pico::Bool>(shared::ProcessEnv::GetModuleByName("rendersystemvulkan.dll"));

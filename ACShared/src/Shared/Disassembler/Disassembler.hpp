@@ -16,7 +16,7 @@ enum class EJumpFollowState
     NotDetour,          // First instructions were not JMP %somewhere%; or MOV %reg%, %64-bit value%; JMP %reg%;
     InstructionLimit,   // Hit maximum instruction count
     DisassemblyFailure, // Failed to disassemble an instruction
-    Unknown             // Shouldn't ever hit this, we somehow ended up exiting the address stack without dying someplace else
+    Unknown // Shouldn't ever hit this, we somehow ended up exiting the address stack without dying someplace else
 };
 
 /**
@@ -30,5 +30,5 @@ enum class EJumpFollowState
  *
  * \return A status code describing the result of the function.
  */
-EJumpFollowState FollowJumpChain(uintptr_t aAddress, uintptr_t& aResult, pico::Size& aSizeOfInstruction) noexcept;
+EJumpFollowState FollowJumpChain(uintptr_t aAddress, uintptr_t& aResult, pico::Size& aSizeOfInstruction);
 } // namespace pico::shared::Disassembler

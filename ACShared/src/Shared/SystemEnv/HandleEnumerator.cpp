@@ -1,6 +1,6 @@
 #include <Shared/SystemEnv/HandleEnumerator.hpp>
 
-pico::Vector<Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX> pico::shared::SystemEnv::GetHandleTable() noexcept
+pico::Vector<Windows::SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX> pico::shared::SystemEnv::GetHandleTable()
 {
     constexpr pico::Size DefaultSize = 0x4000;
 

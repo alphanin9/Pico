@@ -10,7 +10,8 @@ namespace Detail
 struct InterfaceData
 {
     using OnQuery = uintptr_t* (*)();
-    /* 00, the function called to get the interface's address, generally looks something like lea rax, [rip+rel]; ret; */
+    /* 00, the function called to get the interface's address, generally looks something like lea rax, [rip+rel]; ret;
+     */
     OnQuery m_queryFunc{};
     const pico::Char* m_interfaceName{}; // 08, the name of the interface
     InterfaceData* m_nextInterface{};    // 10, a pointer to the next interface of the module
@@ -75,7 +76,7 @@ InterfaceData* FindStartOfInterfaceData(HMODULE aModule)
 using GetRegisteredModules = HMODULE* (*)();
 } // namespace Detail
 
-void pico::Engine::Specific::CS2::WalkInterfaces() noexcept
+void pico::Engine::Specific::CS2::WalkInterfaces()
 {
     auto& logger = Logger::GetLogSink();
 
@@ -108,7 +109,8 @@ void pico::Engine::Specific::CS2::WalkInterfaces() noexcept
 
             for (auto entry = interfaceEntry; entry != nullptr; entry = entry->m_nextInterface)
             {
-                // NOTE: we should check if the interface data pointer leads to a pointer in read-write section of the module as well
+                // NOTE: we should check if the interface data pointer leads to a pointer in read-write section of the
+                // module as well
                 const auto interfaceVtable = *entry->m_queryFunc();
 
                 // Interface vtable is out of bounds? That's certainly not what legitimate software would do.
@@ -122,12 +124,12 @@ void pico::Engine::Specific::CS2::WalkInterfaces() noexcept
     }
 }
 
-void pico::Engine::Specific::CS2::Tick() noexcept
+void pico::Engine::Specific::CS2::Tick()
 {
     WalkInterfaces();
 }
 
-pico::Engine::Specific::CS2& pico::Engine::Specific::CS2::Get() noexcept
+pico::Engine::Specific::CS2& pico::Engine::Specific::CS2::Get()
 {
     static CS2 s_instance{};
 

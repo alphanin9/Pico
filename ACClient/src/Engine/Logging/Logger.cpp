@@ -3,7 +3,7 @@
 #include <basen.hpp>
 #include <uuid.h>
 
-pico::Engine::Logger::Logger() noexcept
+pico::Engine::Logger::Logger()
     : m_dumpFolderName(std::format("PicoLogs_{:%Y%m%d%H%M%S}", std::chrono::system_clock::now()).c_str())
 {
     spdlog::set_level(spdlog::level::trace);
@@ -23,8 +23,7 @@ pico::Engine::Logger::Logger() noexcept
     m_logger->flush_on(spdlog::level::err);
 }
 
-void pico::Engine::Logger::DumpDataToFile(pico::StringView aFileNameTag, void* aDataStart,
-                                          pico::Size aDataSize) noexcept
+void pico::Engine::Logger::DumpDataToFile(pico::StringView aFileNameTag, void* aDataStart, pico::Size aDataSize)
 {
     const auto uuid = uuids::to_string(uuids::uuid_system_generator{}());
     const auto time = std::chrono::system_clock::now();
@@ -51,19 +50,19 @@ void pico::Engine::Logger::DumpDataToFile(pico::StringView aFileNameTag, void* a
     m_logger->info("[Logger] Wrote {} bytes to Base64 file {}", static_cast<pico::Int64>(base64File.tellp()), path);
 }
 
-void pico::Engine::Logger::Tick() noexcept
+void pico::Engine::Logger::Tick()
 {
     m_logger->flush();
 }
 
-pico::Engine::Logger& pico::Engine::Logger::Get() noexcept
+pico::Engine::Logger& pico::Engine::Logger::Get()
 {
     static Logger s_instance{};
 
     return s_instance;
 }
 
-std::shared_ptr<spdlog::logger>& pico::Engine::Logger::GetLogSink() noexcept
+std::shared_ptr<spdlog::logger>& pico::Engine::Logger::GetLogSink()
 {
     static auto& s_logger = Get();
 

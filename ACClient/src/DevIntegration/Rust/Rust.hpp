@@ -5,5 +5,5 @@ namespace pico::Integration::Rust
 {
 void OnReflex(void* aRcx);
 
-pico::Bool InitRust() noexcept;
+pico::Bool InitRust();
 } // namespace pico::Integration::Rust

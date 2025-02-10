@@ -53,24 +53,24 @@ struct WorkingSetScanner : public shared::Util::NonCopyableOrMovable
     /**
      * \brief Walks the process working set in search of potential shellcode/manually mapped images.
      */
-    void WalkWorkingSet() noexcept;
+    void WalkWorkingSet();
 
     /**
      * \brief Updates the process working set.
      * \return Whether or not querying an update of the working set succeeded.
      */
-    pico::Bool UpdateWorkingSet() noexcept;
+    pico::Bool UpdateWorkingSet();
 
     /**
      * \brief Ticks component in the thread pool worker.
      */
-    void Tick() noexcept;
+    void Tick();
 
     /**
      * \brief Gets an instance of the working set scanner.
      *
      * \return A singleton instance of the working set scanner.
      */
-    static WorkingSetScanner& Get() noexcept;
+    static WorkingSetScanner& Get();
 };
 } // namespace pico::Engine

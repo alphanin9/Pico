@@ -47,19 +47,19 @@ struct Engine : shared::Util::NonCopyableOrMovable
      * Most of these checks should not be inside of the client, but inside of the launcher
      * or be done driver-side.
      */
-    void Setup() noexcept;
+    void Setup();
 
     /**
      * \brief Load important information about the client module.
      * In production, this routine needs to be done differently
      * as it's unlikely the client will be loaded as a normal shared library.
      */
-    void SetupModuleData() noexcept;
+    void SetupModuleData();
 
     /**
      * \brief Tick thread pool and add new tasks.
      */
-    void Tick() noexcept;
+    void Tick();
 
     /**
      * \brief Tick jobs that should be done on the main thread.
@@ -68,13 +68,13 @@ struct Engine : shared::Util::NonCopyableOrMovable
      * maybe some things related to thread context checking to catch stray RIP,
      * maybe setting instrumentation callback...
      */
-    void TickMainThreadJobs() noexcept;
+    void TickMainThreadJobs();
 
     /**
      * \brief Prepare for unloading. Wait for all jobs to be finished and freeze the thread pool. Call teardown
      * functions on any components necessitating them.
      */
-    void Teardown() noexcept;
+    void Teardown();
 
     /**
      * \brief Checks if the thread pool has been tampered with.
@@ -83,7 +83,7 @@ struct Engine : shared::Util::NonCopyableOrMovable
      *
      * \return Whether or not the pool has issues.
      */
-    pico::Bool IsThreadPoolOK() noexcept;
+    pico::Bool IsThreadPoolOK();
 
     /**
      * \brief Checks if an address belongs to our module. This should be inlined.
@@ -91,7 +91,7 @@ struct Engine : shared::Util::NonCopyableOrMovable
      * \param aAddy The checked address.
      * \return True if the address is within our module.
      */
-    __forceinline pico::Bool IsAddressInUs(uintptr_t aAddy) const noexcept
+    __forceinline pico::Bool IsAddressInUs(uintptr_t aAddy) const
     {
         return aAddy >= reinterpret_cast<uintptr_t>(m_moduleBase) &&
                aAddy <= reinterpret_cast<uintptr_t>(m_moduleBase) + m_moduleSize;
@@ -101,7 +101,7 @@ struct Engine : shared::Util::NonCopyableOrMovable
      * \brief Get a singleton instance of the engine.
      * \return A singleton instance of the engine.
      */
-    static Engine& Get() noexcept;
+    static Engine& Get();
 };
 
 /**
@@ -116,7 +116,7 @@ struct Engine : shared::Util::NonCopyableOrMovable
  */
 struct EngineThreadLoadGuard : shared::Util::NonCopyable
 {
-    EngineThreadLoadGuard() noexcept;
-    ~EngineThreadLoadGuard() noexcept;
+    EngineThreadLoadGuard();
+    ~EngineThreadLoadGuard();
 };
 } // namespace pico::Engine

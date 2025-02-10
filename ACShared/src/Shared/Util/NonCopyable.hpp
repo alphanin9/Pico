@@ -24,4 +24,4 @@ struct NonCopyableOrMovable : public NonCopyable
     NonCopyableOrMovable(NonCopyableOrMovable&&) = delete;
     NonCopyableOrMovable& operator=(NonCopyableOrMovable&&) = delete;
 };
-}
+} // namespace pico::shared::Util

@@ -2,7 +2,7 @@
 
 #include <lazy_importer.hpp>
 
-pico::Bool pico::shared::MemoryEnv::FillProcessWorkingSetBuffer(pico::Vector<pico::Uint8>& aBuffer) noexcept
+pico::Bool pico::shared::MemoryEnv::FillProcessWorkingSetBuffer(pico::Vector<pico::Uint8>& aBuffer)
 {
     constexpr pico::Size MinimumBufferSize = 0x8000u;
 
@@ -45,7 +45,7 @@ pico::Bool pico::shared::MemoryEnv::FillProcessWorkingSetBuffer(pico::Vector<pic
     return NT_SUCCESS(status);
 }
 
-pico::Vector<Windows::MEMORY_WORKING_SET_BLOCK> pico::shared::MemoryEnv::GetProcessWorkingSet() noexcept
+pico::Vector<Windows::MEMORY_WORKING_SET_BLOCK> pico::shared::MemoryEnv::GetProcessWorkingSet()
 {
     pico::Vector<pico::Uint8> buffer{};
 
@@ -68,7 +68,7 @@ pico::Vector<Windows::MEMORY_WORKING_SET_BLOCK> pico::shared::MemoryEnv::GetProc
     return workingSet;
 }
 
-pico::Bool pico::shared::MemoryEnv::IsProtectionExecutable(pico::Uint32 aProtection) noexcept
+pico::Bool pico::shared::MemoryEnv::IsProtectionExecutable(pico::Uint32 aProtection)
 {
     return aProtection == PAGE_EXECUTE || aProtection == PAGE_EXECUTE_READ || aProtection == PAGE_EXECUTE_READWRITE ||
            aProtection == PAGE_EXECUTE_WRITECOPY;

@@ -9,7 +9,7 @@ namespace pico::shared::MemoryEnv
  * \return A vector of entries detailing the current process's working set. If the function fails, it returns an empty
  * vector.
  */
-pico::Vector<Windows::MEMORY_WORKING_SET_BLOCK> GetProcessWorkingSet() noexcept;
+pico::Vector<Windows::MEMORY_WORKING_SET_BLOCK> GetProcessWorkingSet();
 
 /**
  * \brief Queries the current process's working set.
@@ -22,13 +22,13 @@ pico::Vector<Windows::MEMORY_WORKING_SET_BLOCK> GetProcessWorkingSet() noexcept;
  *
  * \return Whether or not filling the buffer succeeded.
  */
-pico::Bool FillProcessWorkingSetBuffer(pico::Vector<pico::Uint8>& aBuffer) noexcept;
+pico::Bool FillProcessWorkingSetBuffer(pico::Vector<pico::Uint8>& aBuffer);
 
 /**
  * \brief Checks if the memory protection as queried by VirtualQuery is executable.
  * \param aProtection The memory protection value.
  * \return Whether or not the memory protection is executable.
  */
-pico::Bool IsProtectionExecutable(pico::Uint32 aProtection) noexcept;
+pico::Bool IsProtectionExecutable(pico::Uint32 aProtection);
 
 } // namespace pico::shared::MemoryEnv

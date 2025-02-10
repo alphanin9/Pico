@@ -1,7 +1,7 @@
 #include <Engine/Logging/Logger.hpp>
 #include <Engine/WindowSnap/WindowSnap.hpp>
 
-void pico::Engine::WindowSnap::Tick() noexcept
+void pico::Engine::WindowSnap::Tick()
 {
     auto& logger = Logger::GetLogSink();
 
@@ -86,7 +86,7 @@ void pico::Engine::WindowSnap::Tick() noexcept
     }
 }
 
-pico::Engine::WindowSnap& pico::Engine::WindowSnap::Get() noexcept
+pico::Engine::WindowSnap& pico::Engine::WindowSnap::Get()
 {
     static WindowSnap s_instance{};
 

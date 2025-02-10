@@ -16,12 +16,12 @@ struct StaticString
         std::copy_n(aStr, N, m_buffer);
     }
 
-    constexpr const pico::Char* Get() const noexcept
+    constexpr const pico::Char* Get() const
     {
         return reinterpret_cast<const pico::Char*>(&m_buffer[0]);
     }
 
-    constexpr operator const pico::Char*() const noexcept
+    constexpr operator const pico::Char*() const
     {
         return Get();
     }

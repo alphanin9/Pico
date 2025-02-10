@@ -1,7 +1,7 @@
-#include <Engine/ThreadPool/ThreadPool.hpp>
 #include <DevIntegration/Integration.hpp>
+#include <Engine/ThreadPool/ThreadPool.hpp>
 
-pico::Engine::ThreadPool::ThreadPool() noexcept
+pico::Engine::ThreadPool::ThreadPool()
     : m_pool(std::min(ThreadPool::MaxThreadCount, std::thread::hardware_concurrency()))
 {
     m_threadIds.reserve(m_pool.get_thread_count());
@@ -13,8 +13,10 @@ pico::Engine::ThreadPool::ThreadPool() noexcept
 
         pico::Uint32 sizeWritten{};
 
-        if (!NT_SUCCESS(Windows::NtQueryInformationThread(threadHandle, Windows::THREADINFOCLASS::ThreadBasicInformation, &threadInfo,
-            sizeof(threadInfo), sizeWritten))) {
+        if (!NT_SUCCESS(Windows::NtQueryInformationThread(threadHandle,
+                                                          Windows::THREADINFOCLASS::ThreadBasicInformation, &threadInfo,
+                                                          sizeof(threadInfo), sizeWritten)))
+        {
             // What even happened?
 
             Integration::Die(0x51C01010);
@@ -26,14 +28,14 @@ pico::Engine::ThreadPool::ThreadPool() noexcept
     m_canSubmitJobs = true;
 }
 
-pico::Bool pico::Engine::ThreadPool::CanPushJobs() const noexcept
+pico::Bool pico::Engine::ThreadPool::CanPushJobs() const
 {
-    // To avoid troublesome situations, we only push more jobs 
+    // To avoid troublesome situations, we only push more jobs
     // once the pool has handled everything else that we've thrown at it.
     return m_pool.get_tasks_total() == 0u;
 }
 
-void pico::Engine::ThreadPool::Teardown() noexcept
+void pico::Engine::ThreadPool::Teardown()
 {
     m_pool.purge();
     m_pool.wait();
@@ -41,7 +43,7 @@ void pico::Engine::ThreadPool::Teardown() noexcept
     m_canSubmitJobs = false;
 }
 
-pico::Engine::ThreadPool& pico::Engine::ThreadPool::Get() noexcept
+pico::Engine::ThreadPool& pico::Engine::ThreadPool::Get()
 {
     static ThreadPool s_instance{};
 

@@ -1,6 +1,6 @@
+#include <API/APIFunctions.hpp>
 #include <DevIntegration/Integration.hpp>
 #include <DevIntegration/Rust/Rust.hpp>
-#include <API/APIFunctions.hpp>
 
 void pico::Integration::Rust::OnReflex(void* aRcx)
 {
@@ -15,7 +15,7 @@ void pico::Integration::Rust::OnReflex(void* aRcx)
     Pico_PollMainLoop();
 }
 
-pico::Bool pico::Integration::Rust::InitRust() noexcept
+pico::Bool pico::Integration::Rust::InitRust()
 {
     // Note: bad sig, GameAssembly is just generally rough to sig down
     constexpr auto OnReflexFunc =

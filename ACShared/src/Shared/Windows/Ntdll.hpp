@@ -1,8 +1,8 @@
 #pragma once
 
 #include <Windows.h>
-#include <winternl.h>
 #include <ntstatus.h>
+#include <winternl.h>
 
 /*
  * PDB file: ntdll.pdb
@@ -13015,5 +13015,5 @@ typedef struct _PF_KERNEL_GLOBALS
     /* 0x0058 */ long ScenarioPrefetchCount;
     /* 0x005c */ long __PADDING__[1];
 } PF_KERNEL_GLOBALS, *PPF_KERNEL_GLOBALS; /* size: 0x0060 */
-}
+} // namespace Windows
 #include <poppack.h>

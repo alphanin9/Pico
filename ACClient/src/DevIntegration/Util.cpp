@@ -1,6 +1,6 @@
 #include <DevIntegration/Util.hpp>
 
-pico::Bool pico::Integration::IsProcess(pico::shared::HashedString aProcNameHash) noexcept
+pico::Bool pico::Integration::IsProcess(pico::shared::HashedString aProcNameHash)
 {
     // Get the module name
     UnicodeString fileName{};
@@ -22,17 +22,17 @@ pico::Bool pico::Integration::IsProcess(pico::shared::HashedString aProcNameHash
     return aProcNameHash == hash;
 }
 
-pico::Bool pico::Integration::IsCS2() noexcept
+pico::Bool pico::Integration::IsCS2()
 {
     return Integration::IsProcess("cs2.exe");
 }
 
-pico::Bool pico::Integration::IsRust() noexcept
+pico::Bool pico::Integration::IsRust()
 {
     return Integration::IsProcess("rustclient.exe");
 }
 
-void pico::Integration::WaitUntilModuleLoaded(pico::shared::HashedString aModuleName) noexcept
+void pico::Integration::WaitUntilModuleLoaded(pico::shared::HashedString aModuleName)
 {
     // Just yield until we're good
     while (shared::ProcessEnv::GetModuleByName(aModuleName) == nullptr)
@@ -41,8 +41,7 @@ void pico::Integration::WaitUntilModuleLoaded(pico::shared::HashedString aModule
     }
 }
 
-void pico::Integration::WaitUntilOneOfModulesLoaded(
-    const pico::Vector<pico::shared::HashedString>& aModuleNames) noexcept
+void pico::Integration::WaitUntilOneOfModulesLoaded(const pico::Vector<pico::shared::HashedString>& aModuleNames)
 {
     bool hasLoaded = false;
 
@@ -64,7 +63,7 @@ void pico::Integration::WaitUntilOneOfModulesLoaded(
     } while (!hasLoaded);
 }
 
-void pico::Integration::Die(pico::Uint32 aErrorCode) noexcept
+void pico::Integration::Die(pico::Uint32 aErrorCode)
 {
     DebugBreak();
     TerminateProcess(GetCurrentProcess(), aErrorCode);

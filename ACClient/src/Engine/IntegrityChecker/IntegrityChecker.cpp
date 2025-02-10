@@ -2,7 +2,7 @@
 #include <Engine/IntegrityChecker/IntegrityChecker.hpp>
 #include <Engine/Logging/Logger.hpp>
 
-pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) noexcept
+pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath)
 {
     m_path = aModulePath;
     m_sha256 = shared::Files::GetFileSHA256(aModulePath);
@@ -83,7 +83,7 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath) n
     return RelocateImage(m_image);
 }
 
-pico::Bool pico::Engine::ModuleData::RelocateImage(void* aBaseAddress) noexcept
+pico::Bool pico::Engine::ModuleData::RelocateImage(void* aBaseAddress)
 {
     const auto relocationDelta =
         reinterpret_cast<pico::Uint64>(aBaseAddress) - m_image->get_nt_headers()->optional_header.image_base;
@@ -104,7 +104,7 @@ pico::Bool pico::Engine::ModuleData::RelocateImage(void* aBaseAddress) noexcept
     return true;
 }
 
-void pico::Engine::ModuleData::DumpModuleInfo() noexcept
+void pico::Engine::ModuleData::DumpModuleInfo()
 {
     auto& logger = Logger::GetLogSink();
 
@@ -124,8 +124,7 @@ void pico::Engine::ModuleData::DumpModuleInfo() noexcept
 }
 
 pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& aModule,
-                                                      pico::shared::PE::Image* aImage,
-                                                      pico::Bool aIsClientModule) const noexcept
+                                                      pico::shared::PE::Image* aImage, pico::Bool aIsClientModule) const
 {
     static auto& s_engine = Engine::Get();
     auto& logger = Logger::GetLogSink();
@@ -383,7 +382,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
 }
 
 pico::Bool pico::Engine::IntegrityChecker::ScanImports(pico::Engine::ModuleData& aModule,
-                                                       pico::shared::PE::Image* aImage) const noexcept
+                                                       pico::shared::PE::Image* aImage) const
 {
     // TODO
     // Need to resolve API sets and stuff - or just use GetModuleHandleA and GetProcAddress and pray they're not hooked
@@ -413,7 +412,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanImports(pico::Engine::ModuleData&
     return true;
 }
 
-pico::Bool pico::Engine::IntegrityChecker::ScanClient() noexcept
+pico::Bool pico::Engine::IntegrityChecker::ScanClient()
 {
     constexpr pico::Seconds ClientLibraryRefreshInterval{20};
 
@@ -447,7 +446,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanClient() noexcept
     return ScanModule(s_clientData, shared::PE::GetImagePtr(s_engine.m_moduleBase), true);
 }
 
-void pico::Engine::IntegrityChecker::Tick() noexcept
+void pico::Engine::IntegrityChecker::Tick()
 {
     // Very blanket, IDK how it'll work out in practice
     // Integrity checking is VERY expensive no matter how you play it
@@ -576,7 +575,7 @@ void pico::Engine::IntegrityChecker::Tick() noexcept
     logger->info("[IntegrityChecker] Metrics: Time taken to run tick: {}ms", time.Now());
 }
 
-pico::Engine::IntegrityChecker& pico::Engine::IntegrityChecker::Get() noexcept
+pico::Engine::IntegrityChecker& pico::Engine::IntegrityChecker::Get()
 {
     static IntegrityChecker s_instance{};
 

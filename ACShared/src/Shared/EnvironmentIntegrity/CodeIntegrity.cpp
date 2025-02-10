@@ -1,6 +1,6 @@
 #include <Shared/EnvironmentIntegrity/CodeIntegrity.hpp>
 
-pico::shared::EnvironmentIntegrity::CodeIntegrityConfig pico::shared::EnvironmentIntegrity::GetCodeIntegrityConfig() noexcept
+pico::shared::EnvironmentIntegrity::CodeIntegrityConfig pico::shared::EnvironmentIntegrity::GetCodeIntegrityConfig()
 {
     Windows::SYSTEM_CODEINTEGRITY_INFORMATION info{};
 
@@ -14,13 +14,14 @@ pico::shared::EnvironmentIntegrity::CodeIntegrityConfig pico::shared::Environmen
     CodeIntegrityConfig config{};
 
     config.m_raw = info.CodeIntegrityOptions;
-    
+
     config.m_codeIntegrity = (info.CodeIntegrityOptions & CODEINTEGRITY_OPTION_ENABLED) != 0;
-    config.m_hypervisorCodeIntegrity = (info.CodeIntegrityOptions & CODEINTEGRITY_OPTION_HVCI_KMCI_ENABLED) != 0 &&
-                                       (info.CodeIntegrityOptions & CODEINTEGRITY_OPTION_HVCI_KMCI_STRICTMODE_ENABLED) != 0;
+    config.m_hypervisorCodeIntegrity =
+        (info.CodeIntegrityOptions & CODEINTEGRITY_OPTION_HVCI_KMCI_ENABLED) != 0 &&
+        (info.CodeIntegrityOptions & CODEINTEGRITY_OPTION_HVCI_KMCI_STRICTMODE_ENABLED) != 0;
 
     config.m_testSigning = (info.CodeIntegrityOptions & CODEINTEGRITY_OPTION_TESTSIGN) != 0;
     config.m_debugMode = (info.CodeIntegrityOptions & CODEINTEGRITY_OPTION_DEBUGMODE_ENABLED) != 0;
-    
+
     return config;
 }

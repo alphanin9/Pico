@@ -6,5 +6,5 @@ namespace pico::Integration::CS2
 void OnReflexDX11(void* aRcx);
 void OnReflexVulkan(void* aRcx);
 
-pico::Bool InitCS2() noexcept;
-}
+pico::Bool InitCS2();
+} // namespace pico::Integration::CS2

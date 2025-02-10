@@ -10,7 +10,7 @@ namespace EnvironmentIntegrity
 {
 /**
  * \brief The current Secure Boot config as queried by NtQuerySystemInformation.
- * 
+ *
  * In production this should be validated by other sources.
  */
 struct SecureBootConfig
@@ -26,11 +26,11 @@ struct SecureBootConfig
  * \brief Queries the Secure Boot config and returns it.
  * \return The Secure Boot config.
  */
-SecureBootConfig GetSecureBootConfig() noexcept;
+SecureBootConfig GetSecureBootConfig();
 
 /**
  * \brief Data from Windows's Measured Boot logs in %SystemRoot%/Logs/MeasuredBoot.
- * 
+ *
  * This can shed more light on Secure Boot state.
  */
 struct MeasuredBootData
@@ -41,12 +41,12 @@ struct MeasuredBootData
 
 /**
  * \brief Finds the latest Measured Boot data and dumps it to a vector of bytes.
- * 
+ *
  * This should, along with the Secure Boot configuration, be validated with several sources.
- * 
+ *
  * \return The latest raw Measured Boot data.
  */
-MeasuredBootData GetLastMeasuredBootData() noexcept;
+MeasuredBootData GetLastMeasuredBootData();
 } // namespace EnvironmentIntegrity
 } // namespace shared
 

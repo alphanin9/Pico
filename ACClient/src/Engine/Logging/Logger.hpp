@@ -1,9 +1,9 @@
 #pragma once
 #include <Shared/Pico.hpp>
 
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/msvc_sink.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/msvc_sink.h>
+#include <spdlog/spdlog.h>
 
 namespace pico::Engine
 {
@@ -21,33 +21,33 @@ struct Logger : public shared::Util::NonCopyableOrMovable
     // Name of the folder we will output the logs/dumped data to.
     pico::String m_dumpFolderName{};
 
-    Logger() noexcept;
+    Logger();
 
     /**
      * \brief Dumps arbitrary binary data to a file. Binary data will be Base64-encoded.
-     * 
+     *
      * \param aFileNameTag An identifier tag that will be incorporated into the file name.
      * \param aDataStart Pointer to the start of the data you want to dump.
      * \param aDataSize Size of the data pointed to by aDataStart.
      */
-    void DumpDataToFile(pico::StringView aFileNameTag, void* aDataStart, pico::Size aDataSize) noexcept;
+    void DumpDataToFile(pico::StringView aFileNameTag, void* aDataStart, pico::Size aDataSize);
 
     /**
      * \brief Ticked in thread pool worker. Flushes the logs.
      */
-    void Tick() noexcept;
+    void Tick();
 
     /**
      * \brief Get a singleton instance of the logger.
      * \return A singleton instance of the logger.
      */
-    static Logger& Get() noexcept;
+    static Logger& Get();
 
     /**
      * \brief Get an instance of the spdlog logger - useful to not type out m_logger constantly
-     * 
+     *
      * \return An instance of the spdlog logger.
      */
-    static std::shared_ptr<spdlog::logger>& GetLogSink() noexcept;
+    static std::shared_ptr<spdlog::logger>& GetLogSink();
 };
-}
+} // namespace pico::Engine

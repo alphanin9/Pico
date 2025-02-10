@@ -15,21 +15,21 @@ enum class EFileType
 
 /**
  * \brief Verifies a file's digital signature using the WinVerifyTrust method. This is relatively slow.
- * 
+ *
  * \param aPath The path to the file to be verified.
  * \param aType The system used to perform the file verification check. Other by default.
  *
  * \return Whether the file's digital signature is valid or not.
  */
-pico::Bool VerifyFileTrust(pico::UnicodeStringView aPath, EFileType aType = EFileType::Other) noexcept;
+pico::Bool VerifyFileTrust(pico::UnicodeStringView aPath, EFileType aType = EFileType::Other);
 
 /**
  * \brief Verifies a file's digital signature based on a catalog file. This is relatively slow.
- * 
+ *
  * \param aPath The path to the file to be verified.
  * \param aType The system used to perform the file verification check. Other by default.
  *
  * \return Whether the file's digital signature as listed in the catalog is valid or not.
  */
-pico::Bool VerifyFileTrustFromCatalog(pico::UnicodeStringView aPath, EFileType aType = EFileType::Other) noexcept;
-} // namespace pico::Shared::EnvironmentIntegrity
+pico::Bool VerifyFileTrustFromCatalog(pico::UnicodeStringView aPath, EFileType aType = EFileType::Other);
+} // namespace pico::shared::EnvironmentIntegrity

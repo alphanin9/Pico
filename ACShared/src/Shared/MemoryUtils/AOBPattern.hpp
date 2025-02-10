@@ -10,12 +10,12 @@ namespace pico::shared
 {
 /**
  * \brief Simple class to make raw ptr / func types support AOB patterns.
- * 
+ *
  * AOB pattern format is code style, with \xCC as wildcard in pattern
  * This minimizes need for constexpr processing of pattern
  * CC wildcard is not optimal and you should probably use 2A, but CC is more memorable
  * NOTE: the fact we technically should be using Uint8 array instead of char doesn't really matter
- */ 
+ */
 template<pico::shared::HashedString ModuleName, pico::shared::StaticString Pattern>
 struct AOBPattern
 {
@@ -57,9 +57,9 @@ struct AOBPattern
         const auto stringBufferEnd = stringBuffer + (Pattern.NullTerminatedSize);
 
         // Find AOB in haystack (aka module bounds)
-        const auto iter =
-            std::search(reinterpret_cast<pico::Uint8*>(scanningMin), reinterpret_cast<pico::Uint8*>(scanningMax), stringBuffer, stringBufferEnd,
-                        [](pico::Uint8 aLeft, pico::Uint8 aRight) { return aLeft == aRight || aRight == 0xCC; });
+        const auto iter = std::search(
+            reinterpret_cast<pico::Uint8*>(scanningMin), reinterpret_cast<pico::Uint8*>(scanningMax), stringBuffer,
+            stringBufferEnd, [](pico::Uint8 aLeft, pico::Uint8 aRight) { return aLeft == aRight || aRight == 0xCC; });
 
         const auto asUintptr = reinterpret_cast<uintptr_t>(iter);
 

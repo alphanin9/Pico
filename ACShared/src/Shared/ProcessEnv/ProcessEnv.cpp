@@ -1,7 +1,7 @@
 #include <Shared/ProcessEnv/ProcessEnv.hpp>
 #include <Shared/Util/StringUtils.hpp>
 
-Windows::PEB* pico::shared::ProcessEnv::GetProcessEnvironment() noexcept
+Windows::PEB* pico::shared::ProcessEnv::GetProcessEnvironment()
 {
     static auto s_peb = reinterpret_cast<Windows::PEB*>(
         pico::shared::ProcessEnv::GetCurrentThreadEnvironment()->ProcessEnvironmentBlock);
@@ -9,24 +9,25 @@ Windows::PEB* pico::shared::ProcessEnv::GetProcessEnvironment() noexcept
     return s_peb;
 }
 
-Windows::TEB64* pico::shared::ProcessEnv::GetCurrentThreadEnvironment() noexcept
+Windows::TEB64* pico::shared::ProcessEnv::GetCurrentThreadEnvironment()
 {
     return reinterpret_cast<Windows::TEB64*>(NtCurrentTeb());
 }
 
-pico::Uint32 pico::shared::ProcessEnv::GetTID() noexcept
+pico::Uint32 pico::shared::ProcessEnv::GetTID()
 {
     return static_cast<pico::Uint32>(pico::shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueThread);
 }
 
-pico::Uint32 pico::shared::ProcessEnv::GetPID() noexcept
+pico::Uint32 pico::shared::ProcessEnv::GetPID()
 {
-    static const auto s_pid = static_cast<pico::Uint32>(pico::shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
+    static const auto s_pid =
+        static_cast<pico::Uint32>(pico::shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
 
     return s_pid;
 }
 
-pico::Vector<Windows::LDR_DATA_TABLE_ENTRY*> pico::shared::ProcessEnv::GetLoadedModuleList() noexcept
+pico::Vector<Windows::LDR_DATA_TABLE_ENTRY*> pico::shared::ProcessEnv::GetLoadedModuleList()
 {
     // Note that this is not safe code
     // A module could unload while we're doing things and we'll all be screwed
@@ -46,7 +47,7 @@ pico::Vector<Windows::LDR_DATA_TABLE_ENTRY*> pico::shared::ProcessEnv::GetLoaded
     return entries;
 }
 
-Windows::LDR_DATA_TABLE_ENTRY* pico::shared::ProcessEnv::GetModuleByHash(pico::Uint64 aHash) noexcept
+Windows::LDR_DATA_TABLE_ENTRY* pico::shared::ProcessEnv::GetModuleByHash(pico::Uint64 aHash)
 {
     Windows::LDR_DATA_TABLE_ENTRY* entry = nullptr;
 
@@ -71,12 +72,12 @@ Windows::LDR_DATA_TABLE_ENTRY* pico::shared::ProcessEnv::GetModuleByHash(pico::U
     return entry;
 }
 
-Windows::LDR_DATA_TABLE_ENTRY* pico::shared::ProcessEnv::GetModuleByName(pico::shared::HashedString aHash) noexcept
+Windows::LDR_DATA_TABLE_ENTRY* pico::shared::ProcessEnv::GetModuleByName(pico::shared::HashedString aHash)
 {
     return GetModuleByHash(aHash);
 }
 
-pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION> pico::shared::ProcessEnv::GetCurrentProcessThreads() noexcept
+pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION> pico::shared::ProcessEnv::GetCurrentProcessThreads()
 {
     pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION> threadInfo{};
     // Note: the HANDLE cast is actually correct, as SYSTEM_EXTENDED_PROCESS_INFORMATION::UniqueProcessId is actually

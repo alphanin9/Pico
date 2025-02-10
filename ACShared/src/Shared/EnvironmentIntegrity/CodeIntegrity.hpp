@@ -10,9 +10,9 @@ namespace EnvironmentIntegrity
 {
 /**
  * \brief Code integrity settings from NtQuerySystemInformation
- * 
+ *
  * Note: In a production environment, these should also be double-checked by the kernel-mode component
- * 
+ *
  * Other UM-available sources should be checked as well
  */
 struct CodeIntegrityConfig
@@ -33,7 +33,7 @@ struct CodeIntegrityConfig
     pico::Uint32 m_raw{};
 };
 
-CodeIntegrityConfig GetCodeIntegrityConfig() noexcept;
+CodeIntegrityConfig GetCodeIntegrityConfig();
 } // namespace EnvironmentIntegrity
 } // namespace shared
 } // namespace pico

@@ -1,7 +1,7 @@
 #include <Shared/PE/PE.hpp>
 #include <Shared/ProcessEnv/ProcessEnv.hpp>
 
-pico::shared::PE::Image* pico::shared::PE::GetImagePtr(_In_ void* const aPtrInImage) noexcept
+pico::shared::PE::Image* pico::shared::PE::GetImagePtr(_In_ void* const aPtrInImage)
 {
     if (!aPtrInImage)
     {
@@ -38,7 +38,7 @@ pico::shared::PE::Image* pico::shared::PE::GetImagePtr(_In_ void* const aPtrInIm
 
     // We don't know about it being a proper image? Maybe it's manual mapped or somesuch
     peFileHeader = reinterpret_cast<pico::shared::PE::Image*>(aPtrInImage);
-    
+
     if (IsImageValid(peFileHeader))
     {
         return peFileHeader;
@@ -47,7 +47,7 @@ pico::shared::PE::Image* pico::shared::PE::GetImagePtr(_In_ void* const aPtrInIm
     return nullptr;
 }
 
-pico::Bool pico::shared::PE::IsImageValid(_In_ const pico::shared::PE::Image* const aImage) noexcept
+pico::Bool pico::shared::PE::IsImageValid(_In_ const pico::shared::PE::Image* const aImage)
 {
     if (!aImage)
     {
@@ -68,8 +68,7 @@ pico::Bool pico::shared::PE::IsImageValid(_In_ const pico::shared::PE::Image* co
     return ntHeader->signature == win::NT_HDR_MAGIC;
 }
 
-std::pair<uintptr_t, uintptr_t> pico::shared::PE::GetImageBounds(
-    _In_ const pico::shared::PE::Image* const aImage) noexcept
+std::pair<uintptr_t, uintptr_t> pico::shared::PE::GetImageBounds(_In_ const pico::shared::PE::Image* const aImage)
 {
     if (!IsImageValid(aImage))
     {
@@ -85,7 +84,7 @@ std::pair<uintptr_t, uintptr_t> pico::shared::PE::GetImageBounds(
 }
 
 pico::Vector<std::pair<pico::Uint32, pico::Uint32>> pico::shared::PE::GetFunctionsOfImage(
-    _In_ const pico::shared::PE::Image* const aImage) noexcept
+    _In_ const pico::shared::PE::Image* const aImage)
 {
     if (!IsImageValid(aImage))
     {
@@ -118,7 +117,7 @@ pico::Vector<std::pair<pico::Uint32, pico::Uint32>> pico::shared::PE::GetFunctio
 }
 
 std::pair<uintptr_t, uintptr_t> pico::shared::PE::GetFunctionBounds(_In_ const pico::shared::PE::Image* const aImage,
-                                                                    _In_ const void* const aAddrInFunc) noexcept
+                                                                    _In_ const void* const aAddrInFunc)
 {
     if (!IsImageValid(aImage))
     {
@@ -150,8 +149,7 @@ std::pair<uintptr_t, uintptr_t> pico::shared::PE::GetFunctionBounds(_In_ const p
     return {imageBaseAsUint + it->rva_begin, imageBaseAsUint + it->rva_end};
 }
 
-pico::Bool pico::shared::PE::IsIntegrityCheckableImageSizeSmall(
-    _In_ const pico::shared::PE::Image* const aImage) noexcept
+pico::Bool pico::shared::PE::IsIntegrityCheckableImageSizeSmall(_In_ const pico::shared::PE::Image* const aImage)
 {
     if (!IsImageValid(aImage))
     {
@@ -179,7 +177,7 @@ pico::Bool pico::shared::PE::IsIntegrityCheckableImageSizeSmall(
     return combinedReadOnlySectionSize <= MinimumIntegrityCheckableValidSectionSize;
 }
 
-pico::Bool pico::shared::PE::HasLargeRWXSections(_In_ const pico::shared::PE::Image* const aImage) noexcept
+pico::Bool pico::shared::PE::HasLargeRWXSections(_In_ const pico::shared::PE::Image* const aImage)
 {
     if (!IsImageValid(aImage))
     {
@@ -208,7 +206,7 @@ pico::Bool pico::shared::PE::HasLargeRWXSections(_In_ const pico::shared::PE::Im
     return totalRwxSectionSize >= MaxSizeOfRWXSection;
 }
 
-pico::String pico::shared::PE::GetImagePDBPath(_In_ const pico::shared::PE::Image* const aImage) noexcept
+pico::String pico::shared::PE::GetImagePDBPath(_In_ const pico::shared::PE::Image* const aImage)
 {
     if (!IsImageValid(aImage))
     {
@@ -255,7 +253,7 @@ pico::String pico::shared::PE::GetImagePDBPath(_In_ const pico::shared::PE::Imag
     return {};
 }
 
-pico::Vector<pico::Uint32> pico::shared::PE::GetRelocations(_In_ const pico::shared::PE::Image* const aImage) noexcept
+pico::Vector<pico::Uint32> pico::shared::PE::GetRelocations(_In_ const pico::shared::PE::Image* const aImage)
 {
     if (!IsImageValid(aImage))
     {

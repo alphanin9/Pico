@@ -3,7 +3,7 @@
 #include <Engine/Logging/Logger.hpp>
 #include <Engine/WorkingSetScanner/WorkingSetScanner.hpp>
 
-void pico::Engine::WorkingSetScanner::Tick() noexcept
+void pico::Engine::WorkingSetScanner::Tick()
 {
     static auto& s_engine = Engine::Get();
     auto& logger = Logger::GetLogSink();
@@ -45,7 +45,7 @@ void pico::Engine::WorkingSetScanner::Tick() noexcept
     }
 }
 
-pico::Bool pico::Engine::WorkingSetScanner::UpdateWorkingSet() noexcept
+pico::Bool pico::Engine::WorkingSetScanner::UpdateWorkingSet()
 {
     EngineThreadLoadGuard guard{};
 
@@ -76,7 +76,7 @@ pico::Bool pico::Engine::WorkingSetScanner::UpdateWorkingSet() noexcept
     return false;
 }
 
-void pico::Engine::WorkingSetScanner::WalkWorkingSet() noexcept
+void pico::Engine::WorkingSetScanner::WalkWorkingSet()
 {
     auto& logger = Logger::GetLogSink();
 
@@ -149,7 +149,7 @@ void pico::Engine::WorkingSetScanner::WalkWorkingSet() noexcept
     m_doneWithScan = true;
 }
 
-pico::Engine::WorkingSetScanner& pico::Engine::WorkingSetScanner::Get() noexcept
+pico::Engine::WorkingSetScanner& pico::Engine::WorkingSetScanner::Get()
 {
     static WorkingSetScanner s_instance{};
 

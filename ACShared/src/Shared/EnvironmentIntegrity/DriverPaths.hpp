@@ -17,13 +17,13 @@ struct DriverInfo
 
 /**
  * \brief Gets currently loaded kernel mode drivers.
- * 
+ *
  * Drivers are obtained via the NtQuerySystemInformation(SYSTEM_MODULE_INFORMATION, ...) system call.
- * 
+ *
  * In production, this should probably also be queried and validated via the kernel component.
- * 
+ *
  * \return A vector of structs describing currently loaded drivers.
  * If the function fails, it returns an empty vector.
  */
-pico::Vector<DriverInfo> GetLoadedDriverPaths() noexcept;
-}
+pico::Vector<DriverInfo> GetLoadedDriverPaths();
+} // namespace pico::shared::EnvironmentIntegrity

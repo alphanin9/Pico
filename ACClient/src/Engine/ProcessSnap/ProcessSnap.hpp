@@ -5,15 +5,15 @@ namespace pico::Engine
 {
 /**
  * \brief A more lightweight wrapper over Windows::SYSTEM_EXTENDED_THREAD_INFORMATION, containing things we need.
- * 
+ *
  * This is currently not displayed in the logs due to performance concerns.
- * 
+ *
  * Note that some things may be zero.
  */
 struct ThreadInformation
 {
     pico::Uint32 m_threadId{};
-    
+
     pico::Uint64 m_userTime{};
     pico::Uint64 m_kernelTime{};
 
@@ -25,7 +25,7 @@ struct ThreadInformation
     Windows::KTHREAD_STATE m_threadState{};
     Windows::KWAIT_REASON m_waitReason{};
 
-    ThreadInformation(Windows::SYSTEM_EXTENDED_THREAD_INFORMATION* aThread) noexcept;
+    ThreadInformation(Windows::SYSTEM_EXTENDED_THREAD_INFORMATION* aThread);
     ThreadInformation() = default;
 };
 
@@ -38,14 +38,14 @@ struct ProcessInformation
     pico::Uint32 m_sessionId{};
     // Note: this is only the image name itself, not the whole path!
     pico::UnicodeString m_imageName{};
-    pico::Uint64 m_imageNameHash{}; 
+    pico::Uint64 m_imageNameHash{};
 
     pico::UnicodeString m_imagePath{};
 
     pico::Vector<ThreadInformation> m_threads{};
 
     ProcessInformation(Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION* aProc,
-                       const pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION*>& aThreads) noexcept;
+                       const pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION*>& aThreads);
 
     ProcessInformation() = default;
 };
@@ -76,12 +76,12 @@ struct ProcessSnap : public shared::Util::NonCopyableOrMovable
     /**
      * \brief Tick component in thread pool worker.
      */
-    void Tick() noexcept;
+    void Tick();
 
     /**
      * \brief Get a singleton instance of the process snapper.
      * \return A singleton instance of the process snapper.
      */
-    static ProcessSnap& Get() noexcept;
+    static ProcessSnap& Get();
 };
-}
+} // namespace pico::Engine

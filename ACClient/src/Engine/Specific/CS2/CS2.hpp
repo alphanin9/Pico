@@ -16,17 +16,17 @@ struct CS2 : public shared::Util::NonCopyableOrMovable
      * The interfaces' vtables will be checked for integrity. Utilizes tier0.dll!Plat_GetRegisteredModules to
      * get a list of important modules.
      */
-    void WalkInterfaces() noexcept;
+    void WalkInterfaces();
 
     /**
      * \brief Tick component in thread pool.
      */
-    void Tick() noexcept;
+    void Tick();
 
     /**
      * \brief Get a singleton instance of the CS2-specific detections.
      * \return A singleton instance of the CS2-specific detections.
      */
-    static CS2& Get() noexcept;
+    static CS2& Get();
 };
 } // namespace pico::Engine::Specific
