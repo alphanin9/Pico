@@ -3,7 +3,6 @@ add_requires("asmjit", "base-n", "lazy_importer", "spdlog", "stduuid", "thread-p
 target("ACClient")
     set_kind("shared")
     set_warnings("all")
-    set_exceptions("no-cxx")
     
     add_files("src/**.cpp")
     add_headerfiles("src/**.hpp")
@@ -15,16 +14,16 @@ target("ACClient")
         "BS_THREAD_POOL_NATIVE_EXTENSIONS", 
         "UUID_SYSTEM_GENERATOR"
     )
+    add_cxflags("/GR-")
     add_packages(
         "asmjit",
-        "base-n", 
+        "base-n",
         "hopscotch-map",
         "lazy_importer",
-        "simdutf", 
-        "spdlog", 
-        "stduuid", 
-        "thread-pool", 
-        "tiltedcore", 
+        "spdlog",
+        "stduuid",
+        "thread-pool",
+        "tiltedcore",
         "wil",
         "zydis"
     )

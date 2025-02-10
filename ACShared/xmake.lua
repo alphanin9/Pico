@@ -3,8 +3,7 @@ add_requires("lazy_importer", "picosha2")
 target("ACShared")
     set_kind("static")
     set_warnings("all")
-    set_exceptions("no-cxx")
-    
+
     add_files("src/**.cpp")
     add_includedirs("src/", { public = true })
     add_headerfiles("src/**.hpp")
@@ -15,13 +14,13 @@ target("ACShared")
         "hopscotch-map", 
         "lazy_importer", 
         "picosha2",
-        "simdutf",
         "tiltedcore",
         "wil",
         "zydis"
     )
 
     add_syslinks("Kernel32", "Ncrypt", "Ntdll", "User32", "Version", "Wintrust")
+    add_cxflags("/GR-")
     set_pcxxheader("src/Shared/Pico.hpp")
     set_policy("build.optimization.lto", true)
 

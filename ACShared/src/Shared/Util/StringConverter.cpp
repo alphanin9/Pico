@@ -1,28 +1,27 @@
-#include <simdutf.h>
-
 #include <Shared/Util/StringConverter.hpp>
 
 pico::String pico::shared::Util::ToUTF8(pico::UnicodeStringView aView)
 {
-    // Evil cast
-    const auto expectedSize =
-        simdutf::utf8_length_from_utf16(reinterpret_cast<const char16_t*>(aView.data()), aView.size());
+    const auto bufferSize = WideCharToMultiByte(CP_UTF8, 0u, aView.data(), static_cast<pico::Int32>(aView.size()),
+                                                nullptr, 0, nullptr, nullptr);
 
-    pico::String output(expectedSize, '\0');
+    pico::String output(pico::Size(bufferSize), '\0');
 
-    // Maybe we should assert if expectedSize != received size?
-    const auto _ = simdutf::convert_utf16_to_utf8(reinterpret_cast<const char16_t*>(aView.data()), aView.size(), output.data());
+    WideCharToMultiByte(CP_UTF8, 0u, aView.data(), static_cast<pico::Int32>(aView.size()), output.data(), output.size(),
+                        nullptr, nullptr);
 
     return output;
 }
 
 pico::UnicodeString pico::shared::Util::ToUTF16(pico::StringView aView)
 {
-    const auto expectedSize = simdutf::utf16_length_from_utf8(aView.data(), aView.size());
+    const auto bufferSize =
+        MultiByteToWideChar(CP_UTF8, 0u, aView.data(), static_cast<pico::Int32>(aView.size()), nullptr, 0);
 
-    pico::UnicodeString output(expectedSize, L'\0');
+    pico::UnicodeString output(pico::Size(bufferSize), L'\0');
 
-    const auto _ = simdutf::convert_utf8_to_utf16(aView.data(), aView.size(), reinterpret_cast<char16_t*>(output.data()));
+    MultiByteToWideChar(CP_UTF8, 0u, aView.data(), static_cast<pico::Int32>(aView.size()), output.data(),
+                        output.size());
 
     return output;
 }
