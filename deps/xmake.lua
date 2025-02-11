@@ -1,5 +1,3 @@
-add_requires("zydis")
-
 target("LinuxPE")
     set_default(false)
     set_warnings("none")
@@ -22,3 +20,4 @@ target("safetyhook")
     add_cxflags("/GR-")
     add_packages("zydis")
 
+-- Note: can add more stripped packages here as well! Like stripping down Asmjit's unnecessary features

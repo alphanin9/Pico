@@ -38,8 +38,8 @@
 // WIL
 // Note: this HAS to be 1st
 #include <wil/stl.h>
-#include <wil/filesystem.h>
 #include <wil/resource.h>
+#include <wil/filesystem.h>
 #include <wil/win32_helpers.h>
 
 // LinuxPE

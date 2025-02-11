@@ -1,5 +1,5 @@
 -- Set up shared defines for all project members
-set_languages("c++latest")
+set_languages("c++23")
 
 set_plat("windows")
 set_arch("x64")

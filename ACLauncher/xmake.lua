@@ -6,10 +6,9 @@ target("ACLauncher")
     add_files("src/**.cpp")
     add_deps("ACShared")
     add_packages(
-        "hopscotch-map", 
+        "hopscotch-map",
         "tiltedcore", 
-        "wil", 
-        "zydis"
+        "wil"
     )
     add_syslinks("Ntdll", "Kernel32", "User32", "Version")
     add_cxflags("/GR-")
