@@ -17,7 +17,6 @@ void pico::Integration::Rust::OnReflex(void* aRcx)
 
 pico::Bool pico::Integration::Rust::InitRust()
 {
-    // Note: bad sig, GameAssembly is just generally rough to sig down
     constexpr auto OnReflexFunc =
         pico::shared::RawFunc<"GfxPluginNVIDIAReflex.dll", "\x48\x83\xEC\xCC\xE8\xCC\xCC\xCC\xCC\x48\x85\xC0",
                               pico::Bool (*)(void*)>();

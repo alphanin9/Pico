@@ -1,4 +1,5 @@
 #include <Engine/ContextScanner/ContextScanner.hpp>
+#include <Engine/DriverSnap/DriverSnap.hpp>
 #include <Engine/Engine.hpp>
 #include <Engine/HandleSnap/HandleSnap.hpp>
 #include <Engine/InstrumentationCallbacks/InstrumentationCallbacks.hpp>
@@ -206,7 +207,7 @@ void pico::Engine::Engine::Setup()
     if (!secureBootConfig.m_secureBootEnabled)
     {
         // Should notify user and not execute
-        logger->error("[Preflight] Secure Boot is NOT enabled");
+        logger->error("[Preflight] Secure Boot is NOT enabled! This should not let the app launch.");
     }
 
     // Note: add Measured Boot log dump here
@@ -221,23 +222,12 @@ void pico::Engine::Engine::Setup()
     if (!codeIntegrityConfig.m_codeIntegrity || codeIntegrityConfig.m_debugMode || codeIntegrityConfig.m_testSigning ||
         !codeIntegrityConfig.m_hypervisorCodeIntegrity)
     {
-        logger->error("[Preflight] System CI violation!");
+        logger->error("[Preflight] System CI violation! This should not let the app launch.");
     }
 
-    for (const auto& driver : shared::EnvironmentIntegrity::GetLoadedDriverPaths())
+    if (!DriverSnap::Get().OnPreflight())
     {
-        if (driver.m_fullPath.empty())
-        {
-            logger->warn("[Preflight] Note: Driver {} full path is empty and thus not integrity checkable",
-                         shared::Util::ToUTF8(driver.m_rawPath));
-            continue;
-        }
-
-        if (!shared::EnvironmentIntegrity::VerifyFileTrust(driver.m_fullPath,
-                                                           shared::EnvironmentIntegrity::EFileType::Driver))
-        {
-            logger->error("[Preflight] Driver {} has a bad file signature!", shared::Util::ToUTF8(driver.m_rawPath));
-        }
+        logger->error("[Preflight] Driver violation detected! This should not let the app launch.");
     }
 
     m_canExecute = true;

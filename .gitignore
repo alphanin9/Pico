@@ -2,4 +2,6 @@
 .xmake/
 build/
 vsxmake2022/
+ACClient/Temp/
 CMakeLists.txt
+compile_commands.json
