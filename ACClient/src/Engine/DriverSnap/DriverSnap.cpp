@@ -40,7 +40,7 @@ pico::Bool pico::Engine::DriverSnap::OnPreflight()
         const auto sigResult = shared::EnvironmentIntegrity::VerifyFileTrust(
             driverInfo.m_fullPath, shared::EnvironmentIntegrity::EFileType::Driver);
 
-        m_scannedDrivers.insert_or_assign(shared::FNV1a64(sha256.c_str()), sigResult);
+        m_scannedDrivers.insert_or_assign(shaHash, sigResult);
 
         if (!sigResult)
         {
@@ -48,6 +48,11 @@ pico::Bool pico::Engine::DriverSnap::OnPreflight()
             logger->error("[Preflight - Drivers] Unable to validate driver {} signature!",
                           shared::Util::ToUTF8(driverInfo.m_rawPath));
         }
+
+        const auto taken = profile.Now();
+
+        logger->info("[Preflight - Drivers] Time to verify {}: {}ms", shared::Util::ToUTF8(driverInfo.m_rawPath),
+                     taken);
     }
 
     return isGood;
