@@ -44,7 +44,7 @@ target("ACClient")
 
         -- Note: our internal hexstring alphabet is uppercase, we'll need to turn these to upper as well
 
-        local scriptDir = os.scriptdir()
+        local scriptDir = target:scriptdir()
 
         os.rm("Temp/*")
 
@@ -88,7 +88,7 @@ inline static constexpr auto VulnerableDriverHashes = frozen::make_set<pico::Uin
 
         fileTemplate = string.format(fileTemplate, os.date("%d/%m/%Y %H.%M.%S"), table.concat(concatTable, ",\n\t "))
 
-        io.writefile("src/Engine/DriverSnap/VulnerableDriverList.hpp", fileTemplate)
+        io.writefile(path.join(scriptDir, "src/Engine/DriverSnap/VulnerableDriverList.hpp"), fileTemplate)
     end)
 
 add_rules("plugin.vsxmake.autoupdate")
