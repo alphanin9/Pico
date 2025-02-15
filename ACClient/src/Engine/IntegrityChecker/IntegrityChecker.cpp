@@ -120,6 +120,7 @@ void pico::Engine::ModuleData::DumpModuleInfo()
 
     logger->info("[IntegrityChecker] Raw SHA256: {}", m_sha256);
     logger->info("[IntegrityChecker] Is trusted by WinVerifyTrust: {}", m_isTrusted);
+    logger->info("[IntegrityChecker] PDB path: {}", shared::PE::GetImagePDBPath(m_image));
     logger->info("[IntegrityChecker] End of module data dump...");
 }
 
