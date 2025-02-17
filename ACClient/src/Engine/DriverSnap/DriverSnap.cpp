@@ -58,6 +58,11 @@ pico::Bool pico::Engine::DriverSnap::OnPreflight()
     return isGood;
 }
 
+void pico::Engine::DriverSnap::Tick()
+{
+    
+}
+
 pico::Engine::DriverSnap& pico::Engine::DriverSnap::Get()
 {
     static DriverSnap s_instance{};

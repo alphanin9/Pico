@@ -18,6 +18,16 @@ struct DriverSnap : shared::Util::NonCopyableOrMovable
      */
     pico::Bool OnPreflight();
 
+    /**
+     * \brief Ticks the component in the thread pool. Updates loaded drivers and, if not present in loaded driver list,
+     * checks verification.
+     */
+    void Tick();
+
+    /**
+     * \brief Get an instance of the driver snapper.
+     * \return An instance of the driver snapper.
+     */
     static DriverSnap& Get();
 };
-}
+} // namespace pico::Engine

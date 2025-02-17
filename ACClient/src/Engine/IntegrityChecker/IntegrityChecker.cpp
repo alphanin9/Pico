@@ -13,71 +13,42 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath)
     }
     m_isTrusted = shared::EnvironmentIntegrity::VerifyFileTrust(aModulePath);
 
-    pico::Path filePath = aModulePath;
+    auto [fileHandle, _] = wil::try_open_file(aModulePath.data());
 
-    std::error_code ec{};
-
-    // This shouldn't happen
-    if (!std::filesystem::exists(filePath, ec))
+    if (!fileHandle)
     {
+        // WTF?
         return false;
     }
 
-    if (ec)
+    m_fileHandle = std::move(fileHandle);
+
+    if (!GetFileSizeEx(m_fileHandle.get(), reinterpret_cast<PLARGE_INTEGER>(&m_rawSize)))
     {
+        // How?
         return false;
     }
 
-    auto fileSize = std::filesystem::file_size(filePath, ec);
+    m_fileMappingHandle =
+        wil::unique_handle{CreateFileMappingW(m_fileHandle.get(), nullptr, PAGE_READONLY | SEC_IMAGE_NO_EXECUTE, 0u, 0u, nullptr)};
 
-    // Again, if the file doesn't exist or we die while trying to read it,
-    // how is it loaded?
-    if (ec)
+    if (!m_fileMappingHandle)
     {
+        // WTF?
         return false;
     }
 
-    // Note: Use two vectors instead, one for the raw file content, one for the actual PE file
-    // Note: we read it two times due to SHA256 calc, should probably fix it - or create a file mapping instead
-    pico::Vector<pico::Uint8> rawPeData(fileSize, {});
+    m_fileMap = wil::unique_mapview_ptr<void>(MapViewOfFile(m_fileMappingHandle.get(), PAGE_READWRITE, 0u, 0u, 0u));
 
-    std::ifstream file(filePath, std::ios::binary);
-
-    // Read the entirety of the file from disk
-    // Maybe MapViewOfFile is better? No, not sure if it lets us relocate right (though it should, as Ntdll uses it
-    // internally)
-    file.read(reinterpret_cast<char*>(&rawPeData[0]), fileSize);
-
-    auto rawImage = shared::PE::GetImagePtr(rawPeData.data());
-
-    if (!rawImage)
+    if (!m_fileMap)
     {
+        // WTF 2?
         return false;
     }
 
-    m_rawSize = rawPeData.size();
+    m_image = reinterpret_cast<shared::PE::Image*>(m_fileMap.get());
 
-    // Reset module data, fill with 0s
-    m_modulePeFileData.assign(rawImage->get_nt_headers()->optional_header.size_image, {});
-    m_sizeOfHeaders = rawImage->get_nt_headers()->optional_header.size_headers;
-
-    // Copy PE headers in
-    std::copy_n(rawPeData.begin(), m_sizeOfHeaders, m_modulePeFileData.begin());
-
-    // Copy sections
-    for (const auto& section : rawImage->get_nt_headers()->sections())
-    {
-        std::copy_n(&rawPeData[section.ptr_raw_data], section.size_raw_data,
-                    &m_modulePeFileData[section.virtual_address]);
-    }
-
-    m_image = shared::PE::GetImagePtr(m_modulePeFileData.data());
-
-    if (!m_image)
-    {
-        return false;
-    }
-
+    m_sizeOfHeaders = m_image->get_nt_headers()->optional_header.size_headers;
     m_functionEntries = shared::PE::GetFunctionsOfImage(m_image);
 
     return RelocateImage(m_image);
@@ -94,12 +65,34 @@ pico::Bool pico::Engine::ModuleData::RelocateImage(void* aBaseAddress)
         return true;
     }
 
+    // Test VirtualProtect-free for a bit
+
+    //pico::Uint32 oldProtect{};
+
+    // With file mapping we need this
+    /*if (!VirtualProtect(m_fileMap.get(), m_image->get_nt_headers()->optional_header.size_image, PAGE_READWRITE,
+                        reinterpret_cast<PDWORD>(&oldProtect)))
+    {
+        Logger::GetLogSink()->error("[ModuleData] Reloc VirtualProtect to PAGE_READWRITE failed on image {}!",
+                                    shared::Util::ToUTF8(m_path));
+        return false;
+    }*/
+
     m_relocations = shared::PE::GetRelocations(m_image);
 
-    for (auto relocRva : m_relocations)
+    /*for (auto relocRva : m_relocations)
     {
         *m_image->raw_to_ptr<pico::Uint64>(relocRva) += relocationDelta;
-    }
+    }*/
+
+    // Revert protection to read-only
+    /*if (!VirtualProtect(m_fileMap.get(), m_image->get_nt_headers()->optional_header.size_image, PAGE_READONLY,
+                        reinterpret_cast<PDWORD>(&oldProtect)))
+    {
+        Logger::GetLogSink()->error("[ModuleData] Reloc VirtualProtect to PAGE_READONLY failed on image {}!",
+                                    shared::Util::ToUTF8(m_path));
+        return false;
+    }*/
 
     return true;
 }
@@ -108,10 +101,10 @@ void pico::Engine::ModuleData::DumpModuleInfo()
 {
     auto& logger = Logger::GetLogSink();
 
-    logger->info("[IntegrityChecker] Module data dump...");
+    logger->info("[IntegrityChecker] Module {} data dump...", m_fileMap.get());
     logger->info("[IntegrityChecker] Module path: {}", shared::Util::ToUTF8(m_path));
     logger->info("[IntegrityChecker] Size of module: {}", m_rawSize);
-    logger->info("[IntegrityChecker] Size of mapped module: {}", m_modulePeFileData.size());
+    logger->info("[IntegrityChecker] Size of mapped module: {}", m_image->get_nt_headers()->optional_header.size_image);
     logger->info("[IntegrityChecker] Size of PE headers: {}", m_sizeOfHeaders);
     logger->info("[IntegrityChecker] Relocation count: {}", m_relocations.size());
     logger->info("[IntegrityChecker] Function entry count: {}", m_functionEntries.size());
@@ -122,6 +115,27 @@ void pico::Engine::ModuleData::DumpModuleInfo()
     logger->info("[IntegrityChecker] Is trusted by WinVerifyTrust: {}", m_isTrusted);
     logger->info("[IntegrityChecker] PDB path: {}", shared::PE::GetImagePDBPath(m_image));
     logger->info("[IntegrityChecker] End of module data dump...");
+}
+
+void pico::Engine::ModuleData::Cleanup()
+{
+    // I suppose we must do it in this order or everything dies
+    m_fileMap.reset();
+    m_fileMappingHandle.reset();
+    m_fileHandle.reset();
+
+    m_image = nullptr;
+
+    // Cleanup everything else, I guess
+    m_functionEntries.clear();
+    m_relocations.clear();
+    m_sha256.clear();
+    m_path.clear();
+}
+
+pico::Engine::ModuleData::~ModuleData()
+{
+    Cleanup();
 }
 
 pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& aModule,
@@ -149,13 +163,10 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
     }
 
     // Check PE structure
-    // I don't think this should differ too much at disk and runtime, assuming you fix everything up correctly
-    // Note: something else besides image base also needs fixing, unsure what
-
+    // Things that differ at disk and on runtime:
+    // Image base (sometimes)
+    // Some field in ntdll, at least - but NTDLL is a *very* special boy
     auto peHeadersEqual = true;
-
-    const auto backupImageBase = aModule.m_image->get_nt_headers()->optional_header.image_base;
-    aModule.m_image->get_nt_headers()->optional_header.image_base = reinterpret_cast<pico::Uint64>(aImage);
 
     for (auto i = 0u; i < aModule.m_sizeOfHeaders; i++)
     {
@@ -169,8 +180,6 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
             peHeadersEqual = false;
         }
     }
-
-    aModule.m_image->get_nt_headers()->optional_header.image_base = backupImageBase;
 
     if (!peHeadersEqual)
     {
@@ -284,10 +293,12 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
         }
     }
 
+    const auto imageBase = aModule.m_image->get_nt_headers()->optional_header.image_base;
+
     // (Sorta) find vfunc pointer swaps by checking relocations
     for (pico::Uint32 reloc : aModule.m_relocations)
     {
-        auto relocSection = aModule.m_image->rva_to_section(reloc);
+        const auto relocSection = aModule.m_image->rva_to_section(reloc);
 
         // Skip relocs in writable sections
         if (!relocSection || relocSection->characteristics.mem_write == 1)
@@ -296,19 +307,17 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
         }
 
         // Get the pointer
-        auto diskRelocPtr = *aModule.m_image->raw_to_ptr<void*>(reloc);
+        const auto diskRelocPtr = *aModule.m_image->raw_to_ptr<pico::Uint64>(reloc);
 
-        // Get its RVA
-        auto diskRelocatedRva = aModule.m_image->ptr_to_raw(diskRelocPtr);
-
-        // Is the RVA OK?
-        if (diskRelocatedRva == win::img_npos)
+        if (!diskRelocPtr)
         {
             continue;
         }
 
+        const auto diskRelocatedRVA = pico::Uint32(diskRelocPtr - imageBase);
+
         // Get the section the RVA is pointing to
-        auto section = aModule.m_image->rva_to_section(diskRelocatedRva);
+        auto section = aModule.m_image->rva_to_section(diskRelocatedRVA);
 
         // Skip non-executable sections
         if (!section || section->characteristics.mem_execute == 0)
@@ -433,6 +442,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanClient()
 
     if (timestamp - s_clientData.m_lastIntegrityCheckTime > ClientLibraryRefreshInterval)
     {
+        s_clientData.Cleanup();
         if (s_clientData.Load(modulePath))
         {
             s_clientData.m_lastIntegrityCheckTime = timestamp;
@@ -444,7 +454,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanClient()
         }
     }
 
-    return ScanModule(s_clientData, shared::PE::GetImagePtr(s_engine.m_moduleBase), true);
+    return ScanModule(s_clientData, reinterpret_cast<shared::PE::Image*>(s_engine.m_moduleBase), true);
 }
 
 void pico::Engine::IntegrityChecker::Tick()
@@ -498,7 +508,7 @@ void pico::Engine::IntegrityChecker::Tick()
         if (!m_moduleDataMap.contains(hash))
         {
             // Create entry for uncontained present module
-            m_moduleDataMap.insert_or_assign(hash, ModuleData{});
+            m_moduleDataMap.try_emplace(hash, std::move(ModuleData{}));
         }
 
         if (entry->DllBase == s_engine.m_moduleBase)
@@ -521,7 +531,7 @@ void pico::Engine::IntegrityChecker::Tick()
         }
 
         // Reset entry
-        moduleEntry = {};
+        moduleEntry.Cleanup();
 
         if (!moduleEntry.Load(entry->FullDllName.Buffer))
         {

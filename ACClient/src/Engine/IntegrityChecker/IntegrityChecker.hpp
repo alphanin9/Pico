@@ -9,6 +9,22 @@ namespace pico::Engine
  */
 struct ModuleData
 {
+    ModuleData() = default;
+    ModuleData(const ModuleData&) = delete;
+    ModuleData& operator=(const ModuleData&) = delete;
+    ModuleData(ModuleData&&) = default;
+    ModuleData& operator=(ModuleData&&) = default;
+
+    // TODO
+    // Handle for file
+    wil::unique_hfile m_fileHandle{};
+
+    // Handle for file mapping
+    wil::unique_handle m_fileMappingHandle{};
+
+    // Handle for pointer returned by MapViewOfFile(...)
+    wil::unique_mapview_ptr<void> m_fileMap{};
+
     // Last integrity check time
     pico::Timestamp m_lastIntegrityCheckTime{};
 
@@ -60,6 +76,16 @@ struct ModuleData
      * \brief Dumps the module information to the logger. In production, this should be sent to the backend.
      */
     void DumpModuleInfo();
+
+    /**
+     * \brief Resets internal data. Cleans up the file mapping properly as well.
+     */
+    void Cleanup();
+
+    /**
+     * \brief Destructor. Calls Cleanup() to clean the file mapping properly.
+     */
+    ~ModuleData();
 };
 
 /**

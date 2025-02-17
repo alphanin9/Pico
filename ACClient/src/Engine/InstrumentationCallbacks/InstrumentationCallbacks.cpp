@@ -34,15 +34,15 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
 {
     // While we could just import them, I'm not sure it'd work properly
     // This does
-    static void* RtlCaptureContext = LI_FN(RtlCaptureContext).nt_cached();
-    static void* RtlRestoreContext = LI_FN(RtlRestoreContext).nt_cached();
-    static void* LdrInitializeThunk = LI_FN(LdrInitializeThunk).nt_cached();
-    static void* KiUserExceptionDispatcher = LI_FN(KiUserExceptionDispatcher).nt_cached();
-    static void* KiUserApcDispatcher = LI_FN(KiUserApcDispatcher).nt_cached();
+    void* RtlCaptureContext = LI_FN(RtlCaptureContext).nt_cached();
+    void* RtlRestoreContext = LI_FN(RtlRestoreContext).nt_cached();
+    void* LdrInitializeThunk = LI_FN(LdrInitializeThunk).nt_cached();
+    void* KiUserExceptionDispatcher = LI_FN(KiUserExceptionDispatcher).nt_cached();
+    void* KiUserApcDispatcher = LI_FN(KiUserApcDispatcher).nt_cached();
 
-    static constexpr auto ContextRip = asmjit::x86::qword_ptr(asmjit::x86::rcx, offsetof(Windows::CONTEXT, Rip));
-    static constexpr auto ContextRcx = asmjit::x86::qword_ptr(asmjit::x86::rcx, offsetof(Windows::CONTEXT, Rcx));
-    static constexpr auto ContextRsp = asmjit::x86::qword_ptr(asmjit::x86::rcx, offsetof(Windows::CONTEXT, Rsp));
+    constexpr auto ContextRip = asmjit::x86::qword_ptr(asmjit::x86::rcx, offsetof(Windows::CONTEXT, Rip));
+    constexpr auto ContextRcx = asmjit::x86::qword_ptr(asmjit::x86::rcx, offsetof(Windows::CONTEXT, Rcx));
+    constexpr auto ContextRsp = asmjit::x86::qword_ptr(asmjit::x86::rcx, offsetof(Windows::CONTEXT, Rsp));
 
     // Note: we only make any special logic for the important ones
     // Because they're, well, *important*
@@ -132,7 +132,15 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
     // End OnKiUserExceptionDispatcher
 
     // Start OnKiUserApcDispatcher
+
+    // [RSP] = APC processor func addr (wut? it's also context... Yeah...)
+    // RSP + 0x18 = RtlDispatchAPC
+    // RSP + 0x10 = Could be APC param
+    // RSP + 0x8 = _APC_CALLBACK_DATA when using QUEUE_USER_APC_CALLBACK_DATA_CONTEXT, at least
     aAssembler.bind(labelApc);
+    aAssembler.mov(asmjit::x86::r11, ContextRsp);
+    aAssembler.mov(asmjit::x86::rcx, asmjit::x86::qword_ptr(asmjit::x86::r11, 0u));
+    aAssembler.mov(asmjit::x86::rdx, asmjit::x86::qword_ptr(asmjit::x86::r11, 8u));
     aAssembler.mov(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(&OnKiUserApcDispatcher));
     aAssembler.sub(asmjit::x86::rsp, 32u);
     aAssembler.call(asmjit::x86::r10);
@@ -141,6 +149,11 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
 
     // Restore context and subsequently exit
     aAssembler.bind(labelExit);
+
+    // Cleanup IC signs
+    aAssembler.mov(GsPc, 0ull);
+    aAssembler.mov(GsSp, 0ull);
+
     aAssembler.mov(asmjit::x86::rcx, asmjit::x86::r15);
     aAssembler.mov(asmjit::x86::rdx, 0u);
     aAssembler.sub(asmjit::x86::rsp, 32u);
@@ -233,12 +246,12 @@ void pico::Engine::InstrumentationCallbacks::UpdateThreads()
 
     for (auto i = 0; i < m_newThreadRecordCount; i++)
     {
-        logger->info("[Instrumentation] Thread ID {}, start address: {:#x}", m_newThreadRecords[i].m_threadId,
+        logger->info("[Instrumentation] Thread ID {}, start address: {}", m_newThreadRecords[i].m_threadId,
                      m_newThreadRecords[i].m_threadStartAddress);
 
         void* pe{};
 
-        RtlPcToFileHeader(reinterpret_cast<void*>(m_newThreadRecords[i].m_threadStartAddress), &pe);
+        RtlPcToFileHeader(m_newThreadRecords[i].m_threadStartAddress, &pe);
 
         if (!pe)
         {
@@ -303,7 +316,7 @@ pico::Bool pico::Engine::InstrumentationCallbacks::IsAddressAllocatedByJITAlloca
     return m_jit.allocator()->query(_, reinterpret_cast<void*>(aAddress)) == asmjit::ErrorCode::kErrorOk;
 }
 
-void pico::Engine::InstrumentationCallbacks::OnLdrInitializeThunk(pico::Uint64 aThreadStartAddress)
+void pico::Engine::InstrumentationCallbacks::OnLdrInitializeThunk(void* aThreadStartAddress)
 {
     NewThreadRecord record{.m_threadStartAddress = aThreadStartAddress, .m_threadId = shared::ProcessEnv::GetTID()};
 
@@ -334,9 +347,10 @@ void pico::Engine::InstrumentationCallbacks::OnKiUserExceptionDispatcher(Windows
     Detail::m_globalPtr->m_exceptionRecords.push_back(std::move(record));
 }
 
-void pico::Engine::InstrumentationCallbacks::OnKiUserApcDispatcher(Windows::CONTEXT*)
+void pico::Engine::InstrumentationCallbacks::OnKiUserApcDispatcher(void* aApcReceiver, APC_CALLBACK_DATA* aApcData)
 {
     // Currently ignored, unsure on how to analyze
+    // After research, could be an efficient way to add things to context scanner
 }
 
 void pico::Engine::InstrumentationCallbacks::OnUnknownInstrumentationCallback(Windows::CONTEXT*)

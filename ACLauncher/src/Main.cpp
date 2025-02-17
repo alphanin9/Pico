@@ -126,6 +126,15 @@ pico::Int32 main(pico::Int32 aArgc, pico::Char** aArgv)
         ResumeThread(procInfo.hThread);
         wil::handle_wait(threadHandle.get());
 
+        // We're done with loading, free the client's path from memory
+        // Everything else will be handled by wil
+        pico::Size freeSize{};
+
+        if (!NT_SUCCESS(Windows::NtFreeVirtualMemory(procInfo.hProcess, memoryBaseAddress, freeSize, MEM_RELEASE)))
+        {
+            return 1;
+        }
+
         std::println("Waiting for process exit...");
 
         wil::handle_wait(procInfo.hProcess);
@@ -139,15 +148,6 @@ pico::Int32 main(pico::Int32 aArgc, pico::Char** aArgv)
         if (!NT_SUCCESS(exitCode))
         {
             std::println("Process exited with error! See if you can make a minidump now.");
-        }
-
-        // We're done with loading, free the client's path from memory
-        // Everything else will be handled by wil
-        pico::Size freeSize{};
-
-        if (!NT_SUCCESS(Windows::NtFreeVirtualMemory(procInfo.hProcess, memoryBaseAddress, freeSize, MEM_RELEASE)))
-        {
-            return 1;
         }
 
         return 0;

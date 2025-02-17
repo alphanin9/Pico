@@ -24,7 +24,7 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
      */
     struct NewThreadRecord
     {
-        pico::Uint64 m_threadStartAddress{};
+        void* m_threadStartAddress{};
         pico::Uint32 m_threadId{};
     };
 
@@ -145,7 +145,7 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
      * constraints. Code has to not use TLS.
      * \param aThreadStartAddress The start address of the new thread.
      */
-    static void OnLdrInitializeThunk(pico::Uint64 aThreadStartAddress);
+    static void OnLdrInitializeThunk(void* aThreadStartAddress);
 
     /**
      * \brief Instrumentation callback for exceptions raised in our process context. No particular re-entrancy
@@ -157,9 +157,13 @@ struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
 
     /**
      * \brief Instrumentation callback for APCs received for our process. Unknown re-entrancy constraints.
-     * \param aCtx The instrumentation callback's acquired context.
+     *
+     * Can be used to dump thread stacks with QueueUserAPC2.
+     *
+     * \param aApcReceiver The function intended to receive the APC.
+     * \param aApcData The APC context structure built by Windows. Only valid when using our APC receiver function.
      */
-    static void OnKiUserApcDispatcher(Windows::CONTEXT* aCtx);
+    static void OnKiUserApcDispatcher(void* aApcReceiver, APC_CALLBACK_DATA* aApcData);
 
     /**
      * \brief Instrumentation callback for unknown calls (no specific handler). Can be a system call or something we
