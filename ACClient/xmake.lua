@@ -86,6 +86,8 @@ inline static constexpr auto VulnerableDriverHashes = frozen::make_set<pico::Uin
             table.insert(concatTable, string.format("shared::FNV1a64(\"%s\")", k))
         end
 
+        table.sort(concatTable)
+
         fileTemplate = string.format(fileTemplate, os.date("%d/%m/%Y %H.%M.%S"), table.concat(concatTable, ",\n\t "))
 
         io.writefile(path.join(scriptDir, "src/Engine/DriverSnap/VulnerableDriverList.hpp"), fileTemplate)
