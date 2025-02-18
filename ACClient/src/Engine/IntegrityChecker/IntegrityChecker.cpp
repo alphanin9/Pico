@@ -38,6 +38,7 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath)
         return false;
     }
 
+    // PAGE_READONLY seems to fail for whatever reason, fun times
     m_fileMap = wil::unique_mapview_ptr<void>(MapViewOfFile(m_fileMappingHandle.get(), PAGE_READWRITE, 0u, 0u, 0u));
 
     if (!m_fileMap)
@@ -464,7 +465,7 @@ void pico::Engine::IntegrityChecker::Tick()
     // Additionally, we will scan the client every time
     EngineThreadLoadGuard guard{};
 
-    shared::Util::MsTaken time{};
+    const shared::Util::MsTaken time{};
 
     constexpr pico::Seconds LoadedModuleListReportInterval{60};
     constexpr pico::Seconds ModuleIntegrityCheckInterval{20};
@@ -530,6 +531,8 @@ void pico::Engine::IntegrityChecker::Tick()
             continue;
         }
 
+        const shared::Util::MsTaken loadTime{}; 
+
         // Reset entry
         moduleEntry.Cleanup();
 
@@ -542,13 +545,17 @@ void pico::Engine::IntegrityChecker::Tick()
 
         moduleEntry.DumpModuleInfo();
 
+        logger->info("[IntegrityChecker] Time to load module: {}ms", loadTime.Now());
+
         // We should not have too many consecutive integrity checks
         moduleEntry.m_lastIntegrityCheckTime = timestamp + pico::Seconds(i);
 
         logger->info("[IntegrityChecker] Scanning module {} at base {}",
                      shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
 
-        // Why does GetImagePtr return bogus values every now and then? Who knows?
+
+        const shared::Util::MsTaken scanTime{};
+        // Why does GetImagePtr return bogus values every now and then? Who knows? It's probably threading
         const auto status = ScanModule(moduleEntry, reinterpret_cast<shared::PE::Image*>(entry->DllBase), false);
 
         if (status)
@@ -561,6 +568,8 @@ void pico::Engine::IntegrityChecker::Tick()
             logger->error("[IntegrityChecker] Module {} at base {} failed its integrity check!",
                           shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
         }
+
+        logger->info("[IntegrityChecker] Time to scan module: {}ms", scanTime.Now());
 
         // Only two integrity checks should ever be done on each worker call - one for an arbitrary module,
         // another for the client

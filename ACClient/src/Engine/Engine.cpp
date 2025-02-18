@@ -55,6 +55,7 @@ void pico::Engine::Engine::Tick()
     case 2:
     {
         threadPool.Dispatch([]() { WorkingSetScanner::Get().Tick(); });
+        threadPool.Dispatch([]() { DriverSnap::Get().Tick(); });
         break;
     }
     case 3:

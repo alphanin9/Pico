@@ -13,7 +13,7 @@
  * - Game signals user-mode component (via SDK calling driver somehow? whatevs)
  * - With various data every now and then
  *
- * ===================================================================================================
+ * ...or just implement Epic Online Services, it's far easier and will give you a better result
  */
 
 namespace pico
