@@ -13,10 +13,11 @@ It turns out I have terribly poor ideas for thesis projects.
     - Integrity check will trace detour hooks to their destination using [Zydis](https://github.com/zyantific/zydis) as a disassembler, logging the destination memory location and module
     - Grabbing thread contexts every now and then and analyzing their stacks for executable memory addresses
     - Process working set checks to catch manually mapped modules
-    - Handle and process enumeration
+    - Handle, process and window enumeration
+    - Process working set watch introspection
+    - Thread creation detection via instrumentation callbacks (other callback-based detection vectors in progress/planned)
     - (CS2-specific) Walking the interface list in modules exporting `CreateInterface`
-    - (In progress, the current implementation lags) Process working set watch introspection
-- System integrity verification includes checking for Secure Boot, proper code integrity settings and checking for known bad certificate drivers via `WinVerifyTrust`
+- System integrity verification includes checking for Secure Boot, proper code integrity settings and checking for known bad certificate drivers via `WinVerifyTrust` and a build time-generated vulnerable driver hash list
 - Prioritization for ease of integration and development
 - Not particularly tailored to any game for the sake of easy integration
 - Written in modern-ish C++ and uses XMake for package management and building
@@ -25,8 +26,8 @@ It turns out I have terribly poor ideas for thesis projects.
 
 - Making fallbacks for the integrity check in case of exception information missing
 - IAT hook detection
-- Exception, thread creation, DLL loading, APC and system call instrumentation
-- Performance optimization, currently this may cause stuttering
+- Grabbing thread contexts via APC
+- Additional performance optimization
 
 ### Planned features - external detection
 
@@ -34,7 +35,6 @@ It turns out I have terribly poor ideas for thesis projects.
 
 ### Planned features - environment integrity
 
-- Check for vulnerable drivers being loaded by precomputing a list of hashes from, for example, https://github.com/magicsword-io/LOLDrivers and checking if any drivers loaded have their hash in the list
 - Dump Windows Measured Boot logs
 
 ### Planned features - integration
@@ -63,7 +63,7 @@ It turns out I have terribly poor ideas for thesis projects.
 
 ### Credits
 
-- Arttu M. - big hints for architecture and features, as well as reading material 
+- Arttu M. - big hints for architecture and features, as well as reading material
 - [psiberx](https://github.com/psiberx) - uses his memory utilities and detour library
 - [TiltedPhoques team](https://github.com/tiltedphoques) - [TiltedCore](https://github.com/tiltedphoques/TiltedCore)
 - [LinuxPE](https://github.com/can1357/linux-pe)
