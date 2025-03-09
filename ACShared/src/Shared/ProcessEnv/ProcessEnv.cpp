@@ -3,7 +3,7 @@
 
 Windows::PEB* pico::shared::ProcessEnv::GetProcessEnvironment()
 {
-    static auto s_peb = reinterpret_cast<Windows::PEB*>(
+    static auto s_peb = (Windows::PEB*)(
         pico::shared::ProcessEnv::GetCurrentThreadEnvironment()->ProcessEnvironmentBlock);
 
     return s_peb;
@@ -11,18 +11,18 @@ Windows::PEB* pico::shared::ProcessEnv::GetProcessEnvironment()
 
 Windows::TEB64* pico::shared::ProcessEnv::GetCurrentThreadEnvironment()
 {
-    return reinterpret_cast<Windows::TEB64*>(NtCurrentTeb());
+    return (Windows::TEB64*)(NtCurrentTeb());
 }
 
 pico::Uint32 pico::shared::ProcessEnv::GetTID()
 {
-    return static_cast<pico::Uint32>(pico::shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueThread);
+    return (pico::Uint32)(pico::shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueThread);
 }
 
 pico::Uint32 pico::shared::ProcessEnv::GetPID()
 {
     static const auto s_pid =
-        static_cast<pico::Uint32>(pico::shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
+        (pico::Uint32)(pico::shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
 
     return s_pid;
 }
@@ -84,7 +84,7 @@ pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION> pico::shared::ProcessE
     // HANDLE
 
     static const auto s_pid =
-        reinterpret_cast<HANDLE>(pico::shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
+        (HANDLE)(pico::shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
     shared::SystemEnv::EnumerateRunningProcesses(
         [&threadInfo](Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION* aProc,
                       const pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION*>& aThreads)

@@ -22,7 +22,7 @@ pico::Engine::ThreadPool::ThreadPool()
             Integration::Die(0x51C01010);
         }
 
-        m_threadIds.push_back(reinterpret_cast<pico::Uint32>(threadInfo.ClientId.UniqueThread));
+        m_threadIds.push_back((pico::Uint32)(threadInfo.ClientId.UniqueThread));
     }
 
     m_canSubmitJobs = true;

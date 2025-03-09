@@ -93,8 +93,8 @@ struct Engine : shared::Util::NonCopyableOrMovable
      */
     __forceinline pico::Bool IsAddressInUs(uintptr_t aAddy) const
     {
-        return aAddy >= reinterpret_cast<uintptr_t>(m_moduleBase) &&
-               aAddy <= reinterpret_cast<uintptr_t>(m_moduleBase) + m_moduleSize;
+        return aAddy >= (uintptr_t)(m_moduleBase) &&
+               aAddy <= (uintptr_t)(m_moduleBase) + m_moduleSize;
     }
 
     /**

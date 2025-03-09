@@ -31,7 +31,7 @@ InterfaceData* FindStartOfInterfaceData(HMODULE aModule)
 {
     constexpr auto MaxInstructionCount = 8;
 
-    auto disassemblyCursor = reinterpret_cast<uintptr_t>(GetProcAddress(aModule, "CreateInterface"));
+    auto disassemblyCursor = (uintptr_t)(GetProcAddress(aModule, "CreateInterface"));
 
     if (!disassemblyCursor)
     {
@@ -46,7 +46,7 @@ InterfaceData* FindStartOfInterfaceData(HMODULE aModule)
 
     for (auto i = 0; i < MaxInstructionCount; i++)
     {
-        if (ZYAN_FAILED(ZydisDecoderDecodeFull(&decoder, reinterpret_cast<void*>(disassemblyCursor),
+        if (ZYAN_FAILED(ZydisDecoderDecodeFull(&decoder, (void*)(disassemblyCursor),
                                                ZYDIS_MAX_INSTRUCTION_LENGTH, &instr, operands)))
         {
             // Wat?
@@ -62,7 +62,7 @@ InterfaceData* FindStartOfInterfaceData(HMODULE aModule)
                 absoluteAddr)
             {
                 // A bit hacky, we should be checking if it leads to a valid place in the module as well
-                return *reinterpret_cast<InterfaceData**>(absoluteAddr);
+                return *(InterfaceData**)(absoluteAddr);
             }
         }
 
@@ -84,8 +84,8 @@ void pico::Engine::Specific::CS2::WalkInterfaces()
     // We do check export addresses with the relocation check (nifty thing!), so we should be safe-ish from the EAT
     // being replaced, I think
     static auto s_tier0 = shared::ProcessEnv::GetModuleByName("tier0.dll")->DllBase;
-    static auto s_getRegisteredModules = reinterpret_cast<Detail::GetRegisteredModules>(
-        GetProcAddress(reinterpret_cast<HMODULE>(s_tier0), "Plat_GetRegisteredModules"));
+    static auto s_getRegisteredModules = (Detail::GetRegisteredModules)(
+        GetProcAddress((HMODULE)(s_tier0), "Plat_GetRegisteredModules"));
 
     auto moduleList = s_getRegisteredModules();
 
@@ -102,9 +102,9 @@ void pico::Engine::Specific::CS2::WalkInterfaces()
 
         if (auto interfaceEntry = Detail::FindStartOfInterfaceData(moduleEntry))
         {
-            const auto pe = reinterpret_cast<shared::PE::Image*>(moduleEntry);
+            const auto pe = (shared::PE::Image*)(moduleEntry);
 
-            const auto imageMin = reinterpret_cast<uintptr_t>(moduleEntry);
+            const auto imageMin = (uintptr_t)(moduleEntry);
             const auto imageMax = imageMin + pe->get_nt_headers()->optional_header.size_image;
 
             for (auto entry = interfaceEntry; entry != nullptr; entry = entry->m_nextInterface)

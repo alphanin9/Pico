@@ -3,21 +3,21 @@
 #include <Engine/ProcessSnap/ProcessSnap.hpp>
 
 pico::Engine::ThreadInformation::ThreadInformation(Windows::SYSTEM_EXTENDED_THREAD_INFORMATION* aThread)
-    : m_threadId(reinterpret_cast<pico::Uint32>(aThread->ThreadInfo.ClientId.UniqueThread))
+    : m_threadId((pico::Uint32)(aThread->ThreadInfo.ClientId.UniqueThread))
     , m_userTime(aThread->ThreadInfo.UserTime.QuadPart)
     , m_kernelTime(aThread->ThreadInfo.KernelTime.QuadPart)
     , m_threadState(aThread->ThreadInfo.ThreadState)
     , m_waitReason(aThread->ThreadInfo.WaitReason)
-    , m_tebAddr(reinterpret_cast<pico::Uint64>(aThread->TebBase))
-    , m_startAddress(reinterpret_cast<pico::Uint64>(aThread->ThreadInfo.StartAddress))
-    , m_win32StartAddress(reinterpret_cast<pico::Uint64>(aThread->Win32StartAddress))
+    , m_tebAddr((pico::Uint64)(aThread->TebBase))
+    , m_startAddress((pico::Uint64)(aThread->ThreadInfo.StartAddress))
+    , m_win32StartAddress((pico::Uint64)(aThread->Win32StartAddress))
 {
 }
 
 pico::Engine::ProcessInformation::ProcessInformation(
     Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION* aProc,
     const pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION*>& aThreads)
-    : m_processId(reinterpret_cast<pico::Uint32>(aProc->UniqueProcessId))
+    : m_processId((pico::Uint32)(aProc->UniqueProcessId))
     , m_sessionId(aProc->SessionId)
 {
     if (aProc->ImageName.Buffer)

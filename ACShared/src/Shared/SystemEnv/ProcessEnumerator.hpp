@@ -38,8 +38,7 @@ void EnumerateRunningProcesses(Fn&& aCallbackFunc)
         return;
     }
 
-    Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION* proc =
-        reinterpret_cast<Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION*>(buffer.data());
+    Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION* proc = (Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION*)(buffer.data());
 
     // Iterate over all processes, breaking when NextEntryOffset == 0
     while (true)
@@ -61,8 +60,7 @@ void EnumerateRunningProcesses(Fn&& aCallbackFunc)
             break;
         }
 
-        proc = reinterpret_cast<Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION*>(reinterpret_cast<uintptr_t>(proc) +
-                                                                               proc->NextEntryOffset);
+        proc = (Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION*)((uintptr_t)(proc) + proc->NextEntryOffset);
     }
 }
 } // namespace pico::shared::SystemEnv

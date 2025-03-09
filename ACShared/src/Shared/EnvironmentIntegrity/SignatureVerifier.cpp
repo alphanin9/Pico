@@ -13,7 +13,7 @@ void CloseWintrustDataDriver(WINTRUST_DATA* aData)
 
     aData->dwStateAction = WTD_STATEACTION_CLOSE;
 
-    WinVerifyTrust(static_cast<HWND>(INVALID_HANDLE_VALUE), &policy, aData);
+    WinVerifyTrust((HWND)(INVALID_HANDLE_VALUE), &policy, aData);
 }
 
 /**
@@ -70,12 +70,12 @@ pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrustFromCatalog(pico::
 
     pico::Uint32 hashSize{};
 
-    CryptCATAdminCalcHashFromFileHandle2(catalogAdmin.get(), fileHandle.get(), reinterpret_cast<DWORD*>(&hashSize),
+    CryptCATAdminCalcHashFromFileHandle2(catalogAdmin.get(), fileHandle.get(), (DWORD*)(&hashSize),
                                          nullptr, 0u);
 
     pico::Vector<pico::Uint8> hashBuffer(hashSize, {});
 
-    if (!CryptCATAdminCalcHashFromFileHandle2(catalogAdmin.get(), fileHandle.get(), reinterpret_cast<DWORD*>(&hashSize),
+    if (!CryptCATAdminCalcHashFromFileHandle2(catalogAdmin.get(), fileHandle.get(), (DWORD*)(&hashSize),
                                               hashBuffer.data(), 0u))
     {
         return false;
@@ -84,7 +84,7 @@ pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrustFromCatalog(pico::
     auto hadMatchingCatalogs = false;
 
     for (auto info :
-         wil::make_crypt_catalog_enumerator(catalogAdmin, hashBuffer.data(), static_cast<DWORD>(hashBuffer.size())))
+         wil::make_crypt_catalog_enumerator(catalogAdmin, hashBuffer.data(), (DWORD)(hashBuffer.size())))
     {
         auto catalogRef = info.move_from_unique_hcatinfo();
 
@@ -102,7 +102,7 @@ pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrustFromCatalog(pico::
                 catalogTrustInfo.pcwszMemberFilePath = aPath.data();
                 catalogTrustInfo.hMemberFile = fileHandle.get();
                 catalogTrustInfo.pbCalculatedFileHash = hashBuffer.data();
-                catalogTrustInfo.cbCalculatedFileHash = static_cast<DWORD>(hashBuffer.size());
+                catalogTrustInfo.cbCalculatedFileHash = (DWORD)(hashBuffer.size());
                 catalogTrustInfo.hCatAdmin = catalogAdmin.get();
 
                 switch (aType)
@@ -115,7 +115,7 @@ pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrustFromCatalog(pico::
 
                     data.pCatalog = &catalogTrustInfo;
 
-                    if (WinVerifyTrust(static_cast<HWND>(INVALID_HANDLE_VALUE), &policy, data.addressof()) != 0)
+                    if (WinVerifyTrust((HWND)(INVALID_HANDLE_VALUE), &policy, data.addressof()) != 0)
                     {
                         return false;
                     }
@@ -130,7 +130,7 @@ pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrustFromCatalog(pico::
 
                     data.pCatalog = &catalogTrustInfo;
 
-                    if (WinVerifyTrust(static_cast<HWND>(INVALID_HANDLE_VALUE), &policy, data.addressof()) != 0)
+                    if (WinVerifyTrust((HWND)(INVALID_HANDLE_VALUE), &policy, data.addressof()) != 0)
                     {
                         return false;
                     }
@@ -163,7 +163,7 @@ pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrust(pico::UnicodeStri
         data.pFile = &fileInfo;
 
         const auto trustStatus =
-            WinVerifyTrust(static_cast<HWND>(INVALID_HANDLE_VALUE), &Detail::s_defaultPolicy, data.addressof());
+            WinVerifyTrust((HWND)(INVALID_HANDLE_VALUE), &Detail::s_defaultPolicy, data.addressof());
 
         // Maybe a catalog has the signature?
         return trustStatus == 0u || VerifyFileTrustFromCatalog(aPath, aType);
@@ -177,7 +177,7 @@ pico::Bool pico::shared::EnvironmentIntegrity::VerifyFileTrust(pico::UnicodeStri
         data.pFile = &fileInfo;
 
         const auto trustStatus =
-            WinVerifyTrust(static_cast<HWND>(INVALID_HANDLE_VALUE), &Detail::s_driverPolicy, data.addressof());
+            WinVerifyTrust((HWND)(INVALID_HANDLE_VALUE), &Detail::s_driverPolicy, data.addressof());
 
         // Maybe a catalog has the signature?
         return trustStatus == 0u || VerifyFileTrustFromCatalog(aPath, aType);

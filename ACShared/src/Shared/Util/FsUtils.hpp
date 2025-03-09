@@ -17,4 +17,11 @@ pico::UnicodeString GetFullDriverFilePath(pico::UnicodeStringView aPath);
  * \return A hex string containing the hash of the file. If the function fails, it returns an empty string.
  */
 pico::String GetFileSHA256(pico::UnicodeStringView aPath);
+
+/**
+ * \brief Reads a file into a buffer.
+ * \param aPath The path to the read file.
+ * \return A buffer containing the file's data. If the function fails, it returns an empty buffer.
+ */
+pico::Vector<pico::Uint8> ReadEntireFileToBuffer(pico::UnicodeStringView aPath);
 } // namespace pico::shared::Files

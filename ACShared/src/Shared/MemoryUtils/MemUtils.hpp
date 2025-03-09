@@ -20,7 +20,7 @@ public:
     inline static uintptr_t GetImageBase()
     {
         // ...get first entry in Ldr list?
-        static const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+        static const auto base = (uintptr_t)(GetModuleHandleW(nullptr));
         return base;
     }
 
@@ -33,7 +33,7 @@ public:
             return 0u;
         }
 
-        return reinterpret_cast<uintptr_t>(moduleData->DllBase);
+        return (uintptr_t)(moduleData->DllBase);
     }
 };
 
@@ -70,12 +70,12 @@ public:
 
     [[nodiscard]] inline Callable GetPtr() const
     {
-        return reinterpret_cast<Callable>(GetAddress());
+        return (Callable)(GetAddress());
     }
 
     [[nodiscard]] inline Callable GetOriginalPtr() const
     {
-        return reinterpret_cast<Callable>(GetOriginalAddress());
+        return (Callable)(GetOriginalAddress());
     }
 
     inline static uintptr_t GetAddress()
@@ -117,12 +117,12 @@ public:
 
     inline static auto Invoke(Args... aArgs)
     {
-        return reinterpret_cast<Callable>(GetAddress())(std::forward<Args>(aArgs)...);
+        return (Callable)(GetAddress())(std::forward<Args>(aArgs)...);
     }
 
     inline static auto InvokeOriginal(Args... aArgs)
     {
-        return reinterpret_cast<Callable>(GetOriginalAddress())(std::forward<Args>(aArgs)...);
+        return (Callable)(GetOriginalAddress())(std::forward<Args>(aArgs)...);
     }
 
 private:
@@ -157,8 +157,8 @@ public:
 
     auto operator()(C* aContext, Args... aArgs) const
     {
-        auto vft = *reinterpret_cast<uintptr_t*>(aContext);
-        auto callable = *reinterpret_cast<Callable*>(vft + offset);
+        auto vft = *(uintptr_t*)(aContext);
+        auto callable = *(Callable*)(vft + offset);
         return callable(aContext, std::forward<Args>(aArgs)...);
     }
 };
@@ -236,12 +236,12 @@ public:
 
     [[nodiscard]] inline T* GetPtr() const
     {
-        return reinterpret_cast<T*>(GetAddress());
+        return (T*)(GetAddress());
     }
 
     [[nodiscard]] inline T& GetRef() const
     {
-        return *reinterpret_cast<T*>(GetAddress());
+        return *(T*)(GetAddress());
     }
 
     inline static uintptr_t GetAddress()
@@ -253,12 +253,12 @@ public:
 
     inline static T* Get()
     {
-        return reinterpret_cast<T*>(GetAddress());
+        return (T*)(GetAddress());
     }
 
     inline static T& Ref()
     {
-        return *reinterpret_cast<T*>(GetAddress());
+        return *(T*)(GetAddress());
     }
 };
 
@@ -277,7 +277,7 @@ public:
     }
 
     constexpr OffsetPtr(const void* aBase)
-        : address(reinterpret_cast<uintptr_t>(aBase) + offset)
+        : address((uintptr_t)(aBase) + offset)
     {
     }
 
@@ -322,7 +322,7 @@ public:
 
     [[nodiscard]] inline T* GetPtr() const
     {
-        return reinterpret_cast<T*>(GetAddress());
+        return (T*)(GetAddress());
     }
 
     [[nodiscard]] inline Type* GetValuePtr() const
@@ -354,7 +354,7 @@ public:
 
     inline static uintptr_t Addr(const void* aBase)
     {
-        return reinterpret_cast<uintptr_t>(OffsetPtr(aBase).GetValuePtr());
+        return (uintptr_t)(OffsetPtr(aBase).GetValuePtr());
     }
 
     inline static void Set(const void* aBase, const Type& aValue)

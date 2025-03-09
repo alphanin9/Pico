@@ -40,14 +40,14 @@ void pico::Engine::Logger::DumpDataToFile(pico::StringView aFileNameTag, void* a
 
     pico::String base64{};
 
-    bn::encode_b64(reinterpret_cast<pico::Uint8*>(aDataStart), reinterpret_cast<pico::Uint8*>(aDataStart) + aDataSize,
+    bn::encode_b64((pico::Uint8*)(aDataStart), (pico::Uint8*)(aDataStart) + aDataSize,
                    std::back_inserter(base64));
 
-    file.write(reinterpret_cast<const char*>(aDataStart), aDataSize);
+    file.write((const char*)(aDataStart), aDataSize);
     base64File.write(base64.data(), base64.size());
 
-    m_logger->info("[Logger] Wrote {} bytes to file {}", static_cast<pico::Int64>(file.tellp()), path);
-    m_logger->info("[Logger] Wrote {} bytes to Base64 file {}", static_cast<pico::Int64>(base64File.tellp()), path);
+    m_logger->info("[Logger] Wrote {} bytes to file {}", (pico::Int64)(file.tellp()), path);
+    m_logger->info("[Logger] Wrote {} bytes to Base64 file {}", (pico::Int64)(base64File.tellp()), path);
 }
 
 void pico::Engine::Logger::Tick()

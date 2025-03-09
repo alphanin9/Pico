@@ -17,7 +17,7 @@ pico::Bool pico::shared::MemoryEnv::FillProcessWorkingSetBuffer(pico::Vector<pic
     const auto currentProcess = GetCurrentProcess();
 
     auto status = Windows::NtQueryVirtualMemory(currentProcess, 0u, Windows::MemoryWorkingSetInformation,
-                                                aBuffer.data(), static_cast<pico::Uint32>(aBuffer.size()), sizeWritten);
+                                                aBuffer.data(), (pico::Uint32)(aBuffer.size()), sizeWritten);
 
     // Fun fact: this actually uses STATUS_ACCESS_VIOLATION for reporting the buffer is too small instead of
     // STATUS_INFO_LENGTH_MISMATCH
@@ -25,7 +25,7 @@ pico::Bool pico::shared::MemoryEnv::FillProcessWorkingSetBuffer(pico::Vector<pic
     // It uses both
     while (status == STATUS_ACCESS_VIOLATION || status == STATUS_INFO_LENGTH_MISMATCH)
     {
-        auto asWorkingSetInformation = reinterpret_cast<Windows::MEMORY_WORKING_SET_INFORMATION*>(&aBuffer[0]);
+        auto asWorkingSetInformation = (Windows::MEMORY_WORKING_SET_INFORMATION*)(&aBuffer[0]);
 
         if (asWorkingSetInformation->NumberOfEntries == 0u)
         {
@@ -39,7 +39,7 @@ pico::Bool pico::shared::MemoryEnv::FillProcessWorkingSetBuffer(pico::Vector<pic
         aBuffer.assign(sizeNeeded, {});
 
         status = Windows::NtQueryVirtualMemory(currentProcess, 0u, Windows::MemoryWorkingSetInformation, aBuffer.data(),
-                                               static_cast<pico::Uint32>(aBuffer.size()), sizeWritten);
+                                               (pico::Uint32)(aBuffer.size()), sizeWritten);
     }
 
     return NT_SUCCESS(status);
@@ -54,7 +54,7 @@ pico::Vector<Windows::MEMORY_WORKING_SET_BLOCK> pico::shared::MemoryEnv::GetProc
         return {};
     }
 
-    auto asWorkingSetInformation = reinterpret_cast<Windows::MEMORY_WORKING_SET_INFORMATION*>(&buffer[0]);
+    auto asWorkingSetInformation = (Windows::MEMORY_WORKING_SET_INFORMATION*)(&buffer[0]);
 
     pico::Vector<Windows::MEMORY_WORKING_SET_BLOCK> workingSet{};
 

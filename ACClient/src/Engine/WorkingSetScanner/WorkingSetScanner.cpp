@@ -27,7 +27,7 @@ void pico::Engine::WorkingSetScanner::Tick()
 
         if (UpdateWorkingSet())
         {
-            m_workingSetInfo = reinterpret_cast<Windows::MEMORY_WORKING_SET_INFORMATION*>(m_workingSetBuffer.data());
+            m_workingSetInfo = (Windows::MEMORY_WORKING_SET_INFORMATION*)(m_workingSetBuffer.data());
 
             logger->info("[WorkingSetScanner] Time to capture working set: {}ms", watch.Now());
 
@@ -64,7 +64,7 @@ pico::Bool pico::Engine::WorkingSetScanner::UpdateWorkingSet()
         if (!NT_SUCCESS(status))
         {
             Logger::GetLogSink()->error("[WorkingSetScanner] Failed to refresh working set buffer, status: {}",
-                                        static_cast<pico::Uint32>(status));
+                                        (pico::Uint32)(status));
 
             continue;
         }
@@ -108,7 +108,7 @@ void pico::Engine::WorkingSetScanner::WalkWorkingSet()
         }
 
         // Transform VPN into actual virtual address for the page
-        const auto pageAddr = reinterpret_cast<void*>(curEntry.VirtualPage * 0x1000);
+        const auto pageAddr = (void*)(curEntry.VirtualPage * 0x1000);
 
         MEMORY_BASIC_INFORMATION pageInfo{};
 

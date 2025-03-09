@@ -24,32 +24,32 @@ void pico::Engine::ContextScanner::TickMainThread()
         [this, &selection, &whitelistedIds](Windows::SYSTEM_EXTENDED_PROCESS_INFORMATION* aProc,
                                             const pico::Vector<Windows::SYSTEM_EXTENDED_THREAD_INFORMATION*>& aThreads)
         {
-            if (reinterpret_cast<pico::Uint64>(aProc->UniqueProcessId) != s_pid)
+            if ((pico::Uint64)(aProc->UniqueProcessId) != s_pid)
             {
                 return;
             }
 
             for (auto thread : aThreads)
             {
-                auto threadId = reinterpret_cast<pico::Uint64>(thread->ThreadInfo.ClientId.UniqueThread);
+                auto threadId = (pico::Uint64)(thread->ThreadInfo.ClientId.UniqueThread);
 
                 if (threadId == currentThreadId)
                 {
                     continue;
                 }
 
-                if (whitelistedIds.contains(static_cast<pico::Uint32>(threadId)))
+                if (whitelistedIds.contains((pico::Uint32)(threadId)))
                 {
                     continue;
                 }
 
-                selection.push_back(static_cast<pico::Uint32>(threadId));
+                selection.push_back((pico::Uint32)(threadId));
             }
         });
 
     if (selection.empty())
     {
-        logger->info("No threads found!");
+        logger->info("[ContextScanner] No threads found!");
         return;
     }
 
@@ -99,10 +99,10 @@ void pico::Engine::ContextScanner::TickMainThread()
     // And yes, having dynamic allocation on dynamic allocation is a bit silly too
     frame->m_stackPage.assign(s_engine.m_pageSize / sizeof(void*), {});
 
-    auto pageLow = shared::Util::AlignDown(ctx.Rsp, static_cast<pico::Uint64>(s_engine.m_pageSize));
+    auto pageLow = shared::Util::AlignDown(ctx.Rsp, (pico::Uint64)(s_engine.m_pageSize));
 
     // Copy stack into frame
-    std::copy_n(reinterpret_cast<void**>(pageLow), frame->m_stackPage.size(), frame->m_stackPage.begin());
+    std::copy_n((void**)(pageLow), frame->m_stackPage.size(), frame->m_stackPage.begin());
 
     ResumeThread(threadHandle.get());
 
@@ -138,8 +138,8 @@ void pico::Engine::ContextScanner::Tick()
         {
             // No point worrying about weird KM stuff like perfect injector ATM
 
-            if (reinterpret_cast<uintptr_t>(addy) > engine.m_maximumUMAddress ||
-                reinterpret_cast<uintptr_t>(addy) < engine.m_minimumUMAddress)
+            if ((uintptr_t)(addy) >= engine.m_maximumUMAddress ||
+                (uintptr_t)(addy) <= engine.m_minimumUMAddress)
             {
                 continue;
             }
@@ -162,7 +162,7 @@ void pico::Engine::ContextScanner::Tick()
                 shared::PE::Image* peImage{};
 
                 // Is this a proper PE file? (note: this is a hack, we should be checking info.Type)
-                RtlPcToFileHeader(addy, reinterpret_cast<PVOID*>(&peImage));
+                RtlPcToFileHeader(addy, (PVOID*)(&peImage));
 
                 if (!peImage)
                 {
@@ -175,15 +175,15 @@ void pico::Engine::ContextScanner::Tick()
 
                 pico::UnicodeString moduleName{};
 
-                if (FAILED(wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(peImage), moduleName)))
+                if (FAILED(wil::GetModuleFileNameW((HMODULE)(peImage), moduleName)))
                 {
                     logger->error("[ContextScanner] Failed to get name of module {}!",
-                                  reinterpret_cast<void*>(peImage));
+                                  (void*)(peImage));
                     continue;
                 }
 
                 logger->info("[ContextScanner] Found address {} from {} (base {}) on stack of thread!", addy,
-                             shared::Util::ToUTF8(moduleName), reinterpret_cast<void*>(peImage));
+                             shared::Util::ToUTF8(moduleName), (void*)(peImage));
             }
         }
     }

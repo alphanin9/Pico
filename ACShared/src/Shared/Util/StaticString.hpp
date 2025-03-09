@@ -18,7 +18,7 @@ struct StaticString
 
     constexpr const pico::Char* Get() const
     {
-        return reinterpret_cast<const pico::Char*>(&m_buffer[0]);
+        return (const pico::Char*)(&m_buffer[0]);
     }
 
     constexpr operator const pico::Char*() const

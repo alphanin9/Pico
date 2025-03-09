@@ -53,15 +53,15 @@ struct AOBPattern
         }
 
         // Kinda evil, but what can you do?
-        const auto stringBuffer = reinterpret_cast<const pico::Uint8*>(Pattern.Get());
+        const auto stringBuffer = (const pico::Uint8*)(Pattern.Get());
         const auto stringBufferEnd = stringBuffer + (Pattern.NullTerminatedSize);
 
         // Find AOB in haystack (aka module bounds)
-        const auto iter = std::search(
-            reinterpret_cast<pico::Uint8*>(scanningMin), reinterpret_cast<pico::Uint8*>(scanningMax), stringBuffer,
-            stringBufferEnd, [](pico::Uint8 aLeft, pico::Uint8 aRight) { return aLeft == aRight || aRight == 0xCC; });
+        const auto iter =
+            std::search((pico::Uint8*)(scanningMin), (pico::Uint8*)(scanningMax), stringBuffer, stringBufferEnd,
+                        [](pico::Uint8 aLeft, pico::Uint8 aRight) { return aLeft == aRight || aRight == 0xCC; });
 
-        const auto asUintptr = reinterpret_cast<uintptr_t>(iter);
+        const auto asUintptr = (uintptr_t)(iter);
 
         if (asUintptr == scanningMax)
         {

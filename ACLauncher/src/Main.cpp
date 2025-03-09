@@ -104,7 +104,7 @@ pico::Int32 main(pico::Int32 aArgc, pico::Char** aArgv)
         }
 
         pico::Size bytesWritten{};
-        if (!WriteProcessMemory(procInfo.hProcess, reinterpret_cast<void*>(memoryBaseAddress), fullPath.data(),
+        if (!WriteProcessMemory(procInfo.hProcess, (void*)(memoryBaseAddress), fullPath.data(),
                                 (fullPath.size() + 1) * sizeof(pico::WChar), &bytesWritten))
         {
             return 1;
@@ -114,8 +114,8 @@ pico::Int32 main(pico::Int32 aArgc, pico::Char** aArgv)
         // Note that in CS2 the game overlay renderer will hook LoadLibraryExW
         // (probably for anti-cheat/telemetry, just like they hook VirtualAllocEx and VirtualProtectEx)
         wil::unique_handle threadHandle{CreateRemoteThread(procInfo.hProcess, nullptr, 0u,
-                                                           reinterpret_cast<LPTHREAD_START_ROUTINE>(LoadLibraryW),
-                                                           reinterpret_cast<void*>(memoryBaseAddress), 0u, nullptr)};
+                                                           (LPTHREAD_START_ROUTINE)(LoadLibraryW),
+                                                           (void*)(memoryBaseAddress), 0u, nullptr)};
 
         if (!threadHandle.is_valid())
         {
@@ -141,7 +141,7 @@ pico::Int32 main(pico::Int32 aArgc, pico::Char** aArgv)
 
         pico::Uint32 exitCode{};
 
-        GetExitCodeProcess(procInfo.hProcess, reinterpret_cast<LPDWORD>(&exitCode));
+        GetExitCodeProcess(procInfo.hProcess, (LPDWORD)(&exitCode));
 
         std::println("Process exit code: {:#x}", exitCode);
 

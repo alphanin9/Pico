@@ -73,7 +73,7 @@ BOOL __stdcall DllMain(HMODULE aModule, pico::Uint32 aReason, void* aReserved)
     case DLL_PROCESS_ATTACH:
     {
         // Initialize our integration process
-        if (const auto handle = CreateThread(nullptr, 0u, reinterpret_cast<LPTHREAD_START_ROUTINE>(&pico::InitThread),
+        if (const auto handle = CreateThread(nullptr, 0u, (LPTHREAD_START_ROUTINE)(&pico::InitThread),
                                              nullptr, 0u, nullptr))
         {
             CloseHandle(handle);

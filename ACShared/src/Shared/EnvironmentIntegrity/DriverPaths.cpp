@@ -16,7 +16,7 @@ pico::Vector<pico::shared::EnvironmentIntegrity::DriverInfo> pico::shared::Envir
 
     auto status =
         Windows::NtQuerySystemInformation(Windows::SYSTEM_INFORMATION_CLASS::SystemModuleInformation, buffer.data(),
-                                          static_cast<pico::Uint32>(buffer.size()), sizeNeeded);
+                                          (pico::Uint32)(buffer.size()), sizeNeeded);
 
     if (!NT_SUCCESS(status) && status != STATUS_INFO_LENGTH_MISMATCH)
     {
@@ -27,7 +27,7 @@ pico::Vector<pico::shared::EnvironmentIntegrity::DriverInfo> pico::shared::Envir
     {
         buffer.assign(sizeNeeded, {});
         status = Windows::NtQuerySystemInformation(Windows::SYSTEM_INFORMATION_CLASS::SystemModuleInformation,
-                                                   buffer.data(), static_cast<pico::Uint32>(buffer.size()), sizeNeeded);
+                                                   buffer.data(), (pico::Uint32)(buffer.size()), sizeNeeded);
     }
 
     if (!NT_SUCCESS(status))
@@ -35,7 +35,7 @@ pico::Vector<pico::shared::EnvironmentIntegrity::DriverInfo> pico::shared::Envir
         return {};
     }
 
-    const auto moduleInfo = reinterpret_cast<Windows::RTL_PROCESS_MODULES*>(buffer.data());
+    const auto moduleInfo = (Windows::RTL_PROCESS_MODULES*)(buffer.data());
 
     pico::Vector<DriverInfo> drivers{};
 
@@ -47,7 +47,7 @@ pico::Vector<pico::shared::EnvironmentIntegrity::DriverInfo> pico::shared::Envir
 
         DriverInfo info{};
 
-        info.m_rawPath = Util::ToUTF16(reinterpret_cast<pico::Char*>(mod.FullPathName));
+        info.m_rawPath = Util::ToUTF16((pico::Char*)(mod.FullPathName));
         info.m_fullPath = Files::GetFullDriverFilePath(info.m_rawPath);
 
         drivers.push_back(std::move(info));

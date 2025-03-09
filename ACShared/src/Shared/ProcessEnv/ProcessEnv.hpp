@@ -62,7 +62,7 @@ inline void EnumerateLoadedModules(Fn&& aCallback)
 {
     static const auto s_peb = GetProcessEnvironment();
 
-    EnterCriticalSection(reinterpret_cast<LPCRITICAL_SECTION>(s_peb->LoaderLock));
+    EnterCriticalSection((LPCRITICAL_SECTION)(s_peb->LoaderLock));
 
     // Iterate over loaded modules
     for (auto entry = s_peb->Ldr->InMemoryOrderModuleList.Flink; entry != s_peb->Ldr->InMemoryOrderModuleList.Blink;
@@ -77,7 +77,7 @@ inline void EnumerateLoadedModules(Fn&& aCallback)
         }
     }
 
-    LeaveCriticalSection(reinterpret_cast<LPCRITICAL_SECTION>(s_peb->LoaderLock));
+    LeaveCriticalSection((LPCRITICAL_SECTION)(s_peb->LoaderLock));
 }
 
 /**

@@ -5,7 +5,7 @@
 pico::Bool pico::Integration::SafetyHookDriver::Attach(uintptr_t aAddy, void* aDetour)
 {
     Context::Get().m_logger->info("Attempting to attach hook at {:#x}", aAddy);
-    auto hook = safetyhook::create_inline(reinterpret_cast<void*>(aAddy), aDetour);
+    auto hook = safetyhook::create_inline((void*)aAddy, aDetour);
 
     // We screwed up
     if (!hook)
@@ -22,7 +22,7 @@ pico::Bool pico::Integration::SafetyHookDriver::Attach(uintptr_t aAddy, void* aD
 pico::Bool pico::Integration::SafetyHookDriver::Attach(uintptr_t aAddy, void* aDetour, void** aOriginal)
 {
     Context::Get().m_logger->info("Attempting to attach hook at {:#x}", aAddy);
-    auto hook = safetyhook::create_inline(reinterpret_cast<void*>(aAddy), aDetour);
+    auto hook = safetyhook::create_inline((void*)aAddy, aDetour);
 
     // We screwed up
     if (!hook)
@@ -30,7 +30,7 @@ pico::Bool pico::Integration::SafetyHookDriver::Attach(uintptr_t aAddy, void* aD
         return false;
     }
 
-    *aOriginal = reinterpret_cast<void*>(hook.trampoline().address());
+    *aOriginal = (void*)hook.trampoline().address();
 
     // Move the hook to the datamap
     m_hookDataMap.insert_or_assign(hook.target_address(), std::move(hook));

@@ -23,14 +23,14 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath)
 
     m_fileHandle = std::move(fileHandle);
 
-    if (!GetFileSizeEx(m_fileHandle.get(), reinterpret_cast<PLARGE_INTEGER>(&m_rawSize)))
+    if (!GetFileSizeEx(m_fileHandle.get(), (PLARGE_INTEGER)(&m_rawSize)))
     {
         // How?
         return false;
     }
 
-    m_fileMappingHandle =
-        wil::unique_handle{CreateFileMappingW(m_fileHandle.get(), nullptr, PAGE_READONLY | SEC_IMAGE_NO_EXECUTE, 0u, 0u, nullptr)};
+    m_fileMappingHandle = wil::unique_handle{
+        CreateFileMappingW(m_fileHandle.get(), nullptr, PAGE_READONLY | SEC_IMAGE_NO_EXECUTE, 0u, 0u, nullptr)};
 
     if (!m_fileMappingHandle)
     {
@@ -47,7 +47,7 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath)
         return false;
     }
 
-    m_image = reinterpret_cast<shared::PE::Image*>(m_fileMap.get());
+    m_image = (shared::PE::Image*)(m_fileMap.get());
 
     m_sizeOfHeaders = m_image->get_nt_headers()->optional_header.size_headers;
     m_functionEntries = shared::PE::GetFunctionsOfImage(m_image);
@@ -57,8 +57,7 @@ pico::Bool pico::Engine::ModuleData::Load(pico::UnicodeStringView aModulePath)
 
 pico::Bool pico::Engine::ModuleData::RelocateImage(void* aBaseAddress)
 {
-    const auto relocationDelta =
-        reinterpret_cast<pico::Uint64>(aBaseAddress) - m_image->get_nt_headers()->optional_header.image_base;
+    const auto relocationDelta = (pico::Uint64)(aBaseAddress)-m_image->get_nt_headers()->optional_header.image_base;
 
     if (relocationDelta == 0u)
     {
@@ -68,11 +67,11 @@ pico::Bool pico::Engine::ModuleData::RelocateImage(void* aBaseAddress)
 
     // Test VirtualProtect-free for a bit
 
-    //pico::Uint32 oldProtect{};
+    // pico::Uint32 oldProtect{};
 
     // With file mapping we need this
     /*if (!VirtualProtect(m_fileMap.get(), m_image->get_nt_headers()->optional_header.size_image, PAGE_READWRITE,
-                        reinterpret_cast<PDWORD>(&oldProtect)))
+                        (PDWORD)(&oldProtect)))
     {
         Logger::GetLogSink()->error("[ModuleData] Reloc VirtualProtect to PAGE_READWRITE failed on image {}!",
                                     shared::Util::ToUTF8(m_path));
@@ -88,7 +87,7 @@ pico::Bool pico::Engine::ModuleData::RelocateImage(void* aBaseAddress)
 
     // Revert protection to read-only
     /*if (!VirtualProtect(m_fileMap.get(), m_image->get_nt_headers()->optional_header.size_image, PAGE_READONLY,
-                        reinterpret_cast<PDWORD>(&oldProtect)))
+                        (PDWORD)(&oldProtect)))
     {
         Logger::GetLogSink()->error("[ModuleData] Reloc VirtualProtect to PAGE_READONLY failed on image {}!",
                                     shared::Util::ToUTF8(m_path));
@@ -248,32 +247,31 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
                 uintptr_t addyToDetourTarget{};
 
                 const auto status = shared::Disassembler::FollowJumpChain(
-                    reinterpret_cast<uintptr_t>(aImage->raw_to_ptr<pico::Uint8>(i)), addyToDetourTarget, instrSize);
+                    (uintptr_t)(aImage->raw_to_ptr<pico::Uint8>(i)), addyToDetourTarget, instrSize);
 
                 if (status == shared::Disassembler::EJumpFollowState::Success && addyToDetourTarget)
                 {
                     if (s_engine.IsAddressInUs(addyToDetourTarget))
                     {
-                        logger->info("[IntegrityChecker] Found our detour at {}!",
-                                     reinterpret_cast<void*>(addyToDetourTarget));
+                        logger->info("[IntegrityChecker] Found our detour at {}!", (void*)(addyToDetourTarget));
                     }
 
-                    const auto pe = shared::PE::GetImagePtr(reinterpret_cast<void*>(addyToDetourTarget));
+                    const auto pe = shared::PE::GetImagePtr((void*)(addyToDetourTarget));
 
                     if (!pe)
                     {
                         logger->error(
                             "[IntegrityChecker] Found detour at RVA {:#x} pointing to address {}! No backing image.", i,
-                            reinterpret_cast<void*>(addyToDetourTarget));
+                            (void*)(addyToDetourTarget));
                     }
                     else
                     {
                         pico::UnicodeString imageName{};
-                        wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(pe), imageName);
+                        wil::GetModuleFileNameW((HMODULE)(pe), imageName);
 
                         logger->warn("[IntegrityChecker] Found detour for RVA {:#x} at module {}, addr {}, RVA {:#x}",
-                                     i, shared::Util::ToUTF8(imageName), reinterpret_cast<void*>(addyToDetourTarget),
-                                     addyToDetourTarget - reinterpret_cast<uintptr_t>(pe));
+                                     i, shared::Util::ToUTF8(imageName), (void*)(addyToDetourTarget),
+                                     addyToDetourTarget - (uintptr_t)(pe));
                     }
 
                     i += instrSize;
@@ -340,7 +338,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
             if (!VirtualQuery(memoryRelocPtr, &mbi, sizeof(mbi)))
             {
                 logger->info("[IntegrityChecker] Relocation {} (source {}, RVA {}) does not have a valid virtual addr!",
-                             memoryRelocPtr, reinterpret_cast<void*>(memoryReloc), reloc);
+                             memoryRelocPtr, (void*)(memoryReloc), reloc);
                 continue;
             }
 
@@ -349,13 +347,13 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
             {
                 logger->info(
                     "[IntegrityChecker] Relocation {} (source {}, RVA {}) does not point to executable memory!",
-                    memoryRelocPtr, reinterpret_cast<void*>(memoryReloc), reloc);
+                    memoryRelocPtr, (void*)(memoryReloc), reloc);
                 continue;
             }
 
             logger->info("[IntegrityChecker] Relocation {} (source {}, RVA {}) points outside of an image! This is "
                          "unlikely to be right.",
-                         memoryRelocPtr, reinterpret_cast<void*>(memoryReloc), reloc);
+                         memoryRelocPtr, (void*)(memoryReloc), reloc);
 
             continue;
         }
@@ -365,11 +363,11 @@ pico::Bool pico::Engine::IntegrityChecker::ScanModule(pico::Engine::ModuleData& 
             success = false;
 
             pico::UnicodeString imageName{};
-            wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(pe), imageName);
+            wil::GetModuleFileNameW((HMODULE)(pe), imageName);
 
             logger->info(
                 "[IntegrityChecker] Relocation {} (source {}, RVA {}) points to module {} instead of correct module!",
-                memoryRelocPtr, reinterpret_cast<void*>(memoryReloc), reloc, shared::Util::ToUTF8(imageName));
+                memoryRelocPtr, (void*)(memoryReloc), reloc, shared::Util::ToUTF8(imageName));
         }
 
         if (aIsClientModule && !success)
@@ -406,8 +404,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanImports(pico::Engine::ModuleData&
         return true;
     }
 
-    auto importDirectoryTable =
-        reinterpret_cast<win::import_directory_t*>(aModule.m_image->raw_to_ptr(importDirectory->rva));
+    auto importDirectoryTable = aModule.m_image->raw_to_ptr<win::import_directory_t>(importDirectory->rva);
 
     while (importDirectoryTable->characteristics)
     {
@@ -431,7 +428,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanClient()
     auto& s_logger = Logger::GetLogSink();
 
     pico::UnicodeString modulePath{};
-    if (FAILED(wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(s_engine.m_moduleBase), modulePath)))
+    if (FAILED(wil::GetModuleFileNameW((HMODULE)(s_engine.m_moduleBase), modulePath)))
     {
         // WTF?
         return false;
@@ -455,7 +452,7 @@ pico::Bool pico::Engine::IntegrityChecker::ScanClient()
         }
     }
 
-    return ScanModule(s_clientData, reinterpret_cast<shared::PE::Image*>(s_engine.m_moduleBase), true);
+    return ScanModule(s_clientData, (shared::PE::Image*)(s_engine.m_moduleBase), true);
 }
 
 void pico::Engine::IntegrityChecker::Tick()
@@ -531,7 +528,7 @@ void pico::Engine::IntegrityChecker::Tick()
             continue;
         }
 
-        const shared::Util::MsTaken loadTime{}; 
+        const shared::Util::MsTaken loadTime{};
 
         // Reset entry
         moduleEntry.Cleanup();
@@ -553,10 +550,9 @@ void pico::Engine::IntegrityChecker::Tick()
         logger->info("[IntegrityChecker] Scanning module {} at base {}",
                      shared::Util::ToUTF8(entry->BaseDllName.Buffer), entry->DllBase);
 
-
         const shared::Util::MsTaken scanTime{};
         // Why does GetImagePtr return bogus values every now and then? Who knows? It's probably threading
-        const auto status = ScanModule(moduleEntry, reinterpret_cast<shared::PE::Image*>(entry->DllBase), false);
+        const auto status = ScanModule(moduleEntry, (shared::PE::Image*)(entry->DllBase), false);
 
         if (status)
         {
@@ -592,7 +588,10 @@ void pico::Engine::IntegrityChecker::Tick()
         m_moduleDataMap.erase(i);
     }
 
-    logger->info("[IntegrityChecker] Metrics: Time taken to run tick: {}ms", time.Now());
+    if (moduleScanned)
+    {
+        logger->info("[IntegrityChecker] Metrics: Time taken to run tick: {}ms", time.Now());
+    }
 }
 
 pico::Engine::IntegrityChecker& pico::Engine::IntegrityChecker::Get()

@@ -20,7 +20,7 @@ public:
     {
         pico::Engine::Logger::GetLogSink()->error("[Asmjit] Error {} ({})! Message {} from emitter {}", aErr,
                                                   asmjit::DebugUtils::errorAsString(aErr), aMessage,
-                                                  reinterpret_cast<void*>(aOrigin));
+                                                  (void*)(aOrigin));
     }
 };
 
@@ -71,7 +71,7 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
 
     // Imports mess with us, so we hit back with baffling memes
     // We're also using actual exports from NTDLL instead of imports now
-    aAssembler.mov(asmjit::x86::r10, asmjit::imm(reinterpret_cast<pico::Uint64>(RtlCaptureContext)));
+    aAssembler.mov(asmjit::x86::r10, (pico::Uint64)(RtlCaptureContext));
     aAssembler.call(asmjit::x86::r10);
 
     // After this we can do whatever we want to regs
@@ -89,19 +89,19 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
 
     // Now that we have a backup context, we can start doing actual IC logic
     // Note: to avoid errors, we need to move to temp reg first
-    aAssembler.mov(asmjit::x86::r11, reinterpret_cast<pico::Uint64>(LdrInitializeThunk));
+    aAssembler.mov(asmjit::x86::r11, (pico::Uint64)(LdrInitializeThunk));
     aAssembler.cmp(asmjit::x86::r10, asmjit::x86::r11);
     aAssembler.jz(labelLdr);
-    aAssembler.mov(asmjit::x86::r11, reinterpret_cast<pico::Uint64>(KiUserExceptionDispatcher));
+    aAssembler.mov(asmjit::x86::r11, (pico::Uint64)(KiUserExceptionDispatcher));
     aAssembler.cmp(asmjit::x86::r10, asmjit::x86::r11);
     aAssembler.jz(labelException);
-    aAssembler.mov(asmjit::x86::r11, reinterpret_cast<pico::Uint64>(KiUserApcDispatcher));
+    aAssembler.mov(asmjit::x86::r11, (pico::Uint64)(KiUserApcDispatcher));
     aAssembler.cmp(asmjit::x86::r10, asmjit::x86::r11);
     aAssembler.jz(labelApc);
 
     // Start generic call
-    aAssembler.mov(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(&OnUnknownInstrumentationCallback));
-    aAssembler.sub(asmjit::x86::rsp, 32u);
+    aAssembler.mov(asmjit::x86::r10, (pico::Uint64)(&OnUnknownInstrumentationCallback));
+    aAssembler.sub(asmjit::x86::rsp, 32u); 
     aAssembler.call(asmjit::x86::r10);
     aAssembler.jmp(labelExit);
     // End generic call
@@ -112,7 +112,7 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
     // Get CONTEXT::Rcx twice
     aAssembler.mov(asmjit::x86::rcx, ContextRcx);
     aAssembler.mov(asmjit::x86::rcx, ContextRcx);
-    aAssembler.mov(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(&OnLdrInitializeThunk));
+    aAssembler.mov(asmjit::x86::r10, (pico::Uint64)(&OnLdrInitializeThunk));
     aAssembler.sub(asmjit::x86::rsp, 32u);
     aAssembler.call(asmjit::x86::r10);
     aAssembler.jmp(labelExit);
@@ -125,7 +125,7 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
     // IDK what the additional 32 bytes are
     aAssembler.add(asmjit::x86::rcx, sizeof(Windows::CONTEXT) + 32u);
 
-    aAssembler.mov(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(&OnKiUserExceptionDispatcher));
+    aAssembler.mov(asmjit::x86::r10, (pico::Uint64)(&OnKiUserExceptionDispatcher));
     aAssembler.sub(asmjit::x86::rsp, 32u);
     aAssembler.call(asmjit::x86::r10);
     aAssembler.jmp(labelExit);
@@ -141,7 +141,7 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
     aAssembler.mov(asmjit::x86::r11, ContextRsp);
     aAssembler.mov(asmjit::x86::rcx, asmjit::x86::qword_ptr(asmjit::x86::r11, 0u));
     aAssembler.mov(asmjit::x86::rdx, asmjit::x86::qword_ptr(asmjit::x86::r11, 8u));
-    aAssembler.mov(asmjit::x86::r10, reinterpret_cast<pico::Uint64>(&OnKiUserApcDispatcher));
+    aAssembler.mov(asmjit::x86::r10, (pico::Uint64)(&OnKiUserApcDispatcher));
     aAssembler.sub(asmjit::x86::rsp, 32u);
     aAssembler.call(asmjit::x86::r10);
     aAssembler.jmp(labelExit);
@@ -157,7 +157,7 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
     aAssembler.mov(asmjit::x86::rcx, asmjit::x86::r15);
     aAssembler.mov(asmjit::x86::rdx, 0u);
     aAssembler.sub(asmjit::x86::rsp, 32u);
-    aAssembler.mov(asmjit::x86::r10, asmjit::imm(reinterpret_cast<pico::Uint64>(RtlRestoreContext)));
+    aAssembler.mov(asmjit::x86::r10, (pico::Uint64)(RtlRestoreContext));
     aAssembler.call(asmjit::x86::r10);
 
     // WTF?
@@ -260,7 +260,7 @@ void pico::Engine::InstrumentationCallbacks::UpdateThreads()
         }
 
         pico::UnicodeString libName{};
-        wil::GetModuleFileNameW(reinterpret_cast<HMODULE>(pe), libName);
+        wil::GetModuleFileNameW((HMODULE)pe, libName);
 
         logger->info("[Instrumentation] Owning module: {}", shared::Util::ToUTF8(libName));
     }
@@ -305,7 +305,7 @@ void pico::Engine::InstrumentationCallbacks::Teardown()
 
 pico::Bool pico::Engine::InstrumentationCallbacks::IsCodeInInstrumentationCallback(uintptr_t aRip) const
 {
-    const auto callbackAsUintptr = reinterpret_cast<uintptr_t>(m_callback);
+    const auto callbackAsUintptr = (uintptr_t)(m_callback);
     return aRip >= callbackAsUintptr && aRip <= (callbackAsUintptr + m_sizeOfCallback);
 }
 
@@ -313,7 +313,7 @@ pico::Bool pico::Engine::InstrumentationCallbacks::IsAddressAllocatedByJITAlloca
 {
     // Technically vulnerable, but a reverser can have fun reversing asmjit stuff
     asmjit::JitAllocator::Span _{};
-    return m_jit.allocator()->query(_, reinterpret_cast<void*>(aAddress)) == asmjit::ErrorCode::kErrorOk;
+    return m_jit.allocator()->query(_, (void*)(aAddress)) == asmjit::ErrorCode::kErrorOk;
 }
 
 void pico::Engine::InstrumentationCallbacks::OnLdrInitializeThunk(void* aThreadStartAddress)
@@ -338,10 +338,10 @@ void pico::Engine::InstrumentationCallbacks::OnKiUserExceptionDispatcher(Windows
 
     auto& engine = Engine::Get();
 
-    const auto pageLow = shared::Util::AlignDown(aContext->Rsp, static_cast<pico::Uint64>(engine.m_pageSize));
+    const auto pageLow = shared::Util::AlignDown(aContext->Rsp, (pico::Uint64)(engine.m_pageSize));
 
     record.m_stackPage.assign(engine.m_pageSize / sizeof(void*), {});
-    std::copy_n(reinterpret_cast<void**>(pageLow), record.m_stackPage.size(), record.m_stackPage.begin());
+    std::copy_n((void**)(pageLow), record.m_stackPage.size(), record.m_stackPage.begin());
 
     std::lock_guard _(Detail::m_globalPtr->m_exceptionLock);
     Detail::m_globalPtr->m_exceptionRecords.push_back(std::move(record));

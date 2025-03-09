@@ -48,7 +48,7 @@ pico::String pico::shared::Files::GetFileSHA256(pico::UnicodeStringView aPath)
         return {};
     }
 
-    wil::unique_handle fileMapping{CreateFileMappingA(fileHandle.get(), nullptr, PAGE_READONLY, 0u, 0u, nullptr)};
+    wil::unique_handle fileMapping{CreateFileMappingW(fileHandle.get(), nullptr, PAGE_READONLY, 0u, 0u, nullptr)};
 
     if (!fileMapping)
     {
@@ -62,7 +62,7 @@ pico::String pico::shared::Files::GetFileSHA256(pico::UnicodeStringView aPath)
         return {};
     }
 
-    const auto begin = reinterpret_cast<pico::Uint8*>(mapView.get());
+    const auto begin = (pico::Uint8*)(mapView.get());
     const auto end = begin + fileSize.QuadPart;
 
     std::array<pico::Uint8, picosha2::k_digest_size> buffer{};
@@ -81,4 +81,41 @@ pico::String pico::shared::Files::GetFileSHA256(pico::UnicodeStringView aPath)
     }
 
     return out;
+}
+
+pico::Vector<pico::Uint8> pico::shared::Files::ReadEntireFileToBuffer(pico::UnicodeStringView aPath)
+{
+    auto [fileHandle, error] = wil::try_open_file(aPath.data());
+
+    if (error)
+    {
+        return {};
+    }
+
+    LARGE_INTEGER fileSize{};
+
+    if (!GetFileSizeEx(fileHandle.get(), &fileSize))
+    {
+        return {};
+    }
+
+    wil::unique_handle fileMapping{CreateFileMappingW(fileHandle.get(), nullptr, PAGE_READONLY, 0u, 0u, nullptr)};
+
+    if (!fileMapping)
+    {
+        return {};
+    }
+
+    wil::unique_mapview_ptr<void> mapView{MapViewOfFile(fileMapping.get(), FILE_MAP_READ, 0u, 0u, 0u)};
+
+    if (!mapView)
+    {
+        return {};
+    }
+
+    pico::Vector<pico::Uint8> buf(fileSize.QuadPart, 0u);
+
+    std::copy_n((pico::Uint8*)mapView.get(), fileSize.QuadPart, buf.data());
+
+    return buf;
 }

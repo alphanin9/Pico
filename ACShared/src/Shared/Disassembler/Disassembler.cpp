@@ -24,7 +24,7 @@ struct InstructionData
     static pico::Bool Get(uintptr_t aAddr, ZydisDecoder& aDecoder, InstructionData& aRet)
     {
         // No, Zydis, instructions *can* be longer than 15 bytes - evidently
-        const auto ret = (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&aDecoder, reinterpret_cast<void*>(aAddr), 64u,
+        const auto ret = (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&aDecoder, (void*)(aAddr), 64u,
                                                               &aRet.m_instr, aRet.m_operands)) == ZYAN_TRUE);
 
         if (ret)
@@ -95,7 +95,7 @@ EResolution GetNextForAddressStack(ZydisDecoder& aDecoder, uintptr_t aCurrent, u
             ZydisCalcAbsoluteAddress(&firstDecoded.m_instr, &firstDecoded.m_operands[0], firstDecoded.m_addr,
                                      &dispAddr);
 
-            aNext = *reinterpret_cast<uintptr_t*>(dispAddr);
+            aNext = *(uintptr_t*)(dispAddr);
 
             return EResolution::JustJmp;
         }

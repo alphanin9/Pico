@@ -42,8 +42,8 @@ pico::shared::EnvironmentIntegrity::MeasuredBootData pico::shared::EnvironmentIn
     do
     {
         const pico::UnicodeStringView nameView{findData.cFileName};
-        const pico::Uint64 creationTime = static_cast<pico::Uint64>(findData.ftCreationTime.dwHighDateTime) << 32u |
-                                    findData.ftCreationTime.dwLowDateTime;
+        const pico::Uint64 creationTime = (pico::Uint64)(findData.ftCreationTime.dwHighDateTime) << 32u |
+                                          findData.ftCreationTime.dwLowDateTime;
 
         if (nameView.ends_with(L".json") && creationTime > latestJSONBootLogCreateTime)
         {
@@ -59,8 +59,17 @@ pico::shared::EnvironmentIntegrity::MeasuredBootData pico::shared::EnvironmentIn
 
     } while (FindNextFileW(findIterator.get(), &findData));
 
-    
+    if (!latestRawBootLogCreateTime || !latestJSONBootLogCreateTime)
+    {
+        // That's... not right
+        return {};
+    }
+
+    MeasuredBootData data{};
+
+
+
 
     // TODO
-    return {};
+    return data;
 }

@@ -30,7 +30,7 @@ void pico::Engine::WorkingSetWatcher::Tick()
     {
         Logger::GetLogSink()->error(
             "[WorkingSetWatch] PROCESSINFOCLASS::ProcessWorkingSetWatchEx call failed! Error reason: {:#x}",
-            static_cast<pico::Uint32>(status));
+            (pico::Uint32)(status));
         return;
     }
 
@@ -48,11 +48,11 @@ void pico::Engine::WorkingSetWatcher::Tick()
         auto& entry = m_workingSetWatchBuffer[i];
 
         void* image{};
-        RtlPcToFileHeader(entry.FaultingPc, reinterpret_cast<PVOID*>(&image));
+        RtlPcToFileHeader(entry.FaultingPc, (PVOID*)(&image));
 
         // OK, this is weird...
         if (!image &&
-            !s_instrumentationCallbacks.IsCodeInInstrumentationCallback(reinterpret_cast<uintptr_t>(entry.FaultingPc)))
+            !s_instrumentationCallbacks.IsCodeInInstrumentationCallback((uintptr_t)(entry.FaultingPc)))
         {
             logger->warn("[WorkingSetWatch] Thread {} had bad RIP {} cause a page fault at addr {}",
                          entry.FaultingThreadId, entry.FaultingPc, entry.FaultingVa);

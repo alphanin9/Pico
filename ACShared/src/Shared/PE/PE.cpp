@@ -14,10 +14,10 @@ pico::shared::PE::Image* pico::shared::PE::GetImagePtr(_In_ void* const aPtrInIm
     ProcessEnv::EnumerateLoadedModules(
         [&peFileHeader, aPtrInImage](Windows::LDR_DATA_TABLE_ENTRY* aEntry)
         {
-            const auto asUintptr = reinterpret_cast<uintptr_t>(aPtrInImage);
-            const auto dllBase = reinterpret_cast<uintptr_t>(aEntry->DllBase);
+            const auto asUintptr = (uintptr_t)(aPtrInImage);
+            const auto dllBase = (uintptr_t)(aEntry->DllBase);
 
-            const auto entryPe = reinterpret_cast<pico::shared::PE::Image*>(aEntry->DllBase);
+            const auto entryPe = (pico::shared::PE::Image*)(aEntry->DllBase);
 
             // We can skip the validity check, as invalid PE would never be loaded as a DLL
             const auto imageSize = entryPe->get_nt_headers()->optional_header.size_image;
@@ -37,7 +37,7 @@ pico::shared::PE::Image* pico::shared::PE::GetImagePtr(_In_ void* const aPtrInIm
     }
 
     // We don't know about it being a proper image? Maybe it's manual mapped or somesuch
-    peFileHeader = reinterpret_cast<pico::shared::PE::Image*>(aPtrInImage);
+    peFileHeader = (pico::shared::PE::Image*)(aPtrInImage);
 
     if (IsImageValid(peFileHeader))
     {
@@ -77,7 +77,7 @@ std::pair<uintptr_t, uintptr_t> pico::shared::PE::GetImageBounds(_In_ const pico
 
     const auto& optionalHeader = aImage->get_nt_headers()->optional_header;
 
-    const auto asUintptr = reinterpret_cast<uintptr_t>(aImage);
+    const auto asUintptr = (uintptr_t)(aImage);
 
     // I believe it's very unlikely that we'll ever have to find a signature in PE headers
     return {asUintptr + optionalHeader.base_of_code, asUintptr + optionalHeader.size_image};
@@ -136,7 +136,7 @@ std::pair<uintptr_t, uintptr_t> pico::shared::PE::GetFunctionBounds(_In_ const p
 
     const win::exception_directory exceptionDirectory{aImage->raw_to_ptr<void>(directoryRVA), directorySize};
 
-    const auto imageBaseAsUint = reinterpret_cast<uintptr_t>(aImage);
+    const auto imageBaseAsUint = (uintptr_t)(aImage);
 
     const auto funcRVA = aImage->ptr_to_raw(aAddrInFunc);
     const auto it = exceptionDirectory.find_overlapping(funcRVA);

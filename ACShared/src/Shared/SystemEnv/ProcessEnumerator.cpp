@@ -17,7 +17,7 @@ pico::Bool pico::shared::SystemEnv::FillSystemProcessInformationBuffer(pico::Vec
 
     auto status =
         Windows::NtQuerySystemInformation(Windows::SYSTEM_INFORMATION_CLASS::SystemExtendedProcessInformation,
-                                          aBuffer.data(), static_cast<pico::Uint32>(aBuffer.size()), sizeNeeded);
+                                          aBuffer.data(), (pico::Uint32)(aBuffer.size()), sizeNeeded);
 
     // Resize it until we don't get error anymore
     // aBuffer.assign(...) shouldn't be done here - we don't need it
@@ -26,7 +26,7 @@ pico::Bool pico::shared::SystemEnv::FillSystemProcessInformationBuffer(pico::Vec
         aBuffer.resize(sizeNeeded);
         status =
             Windows::NtQuerySystemInformation(Windows::SYSTEM_INFORMATION_CLASS::SystemExtendedProcessInformation,
-                                              aBuffer.data(), static_cast<pico::Uint32>(aBuffer.size()), sizeNeeded);
+                                              aBuffer.data(), (pico::Uint32)(aBuffer.size()), sizeNeeded);
     }
 
     return NT_SUCCESS(status);

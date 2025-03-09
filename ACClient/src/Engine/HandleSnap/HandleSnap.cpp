@@ -4,8 +4,7 @@
 
 void pico::Engine::HandleSnap::Tick()
 {
-    static const auto s_localPid =
-        static_cast<pico::Uint32>(shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
+    static const auto s_localPid = shared::ProcessEnv::GetPID();
 
     constexpr pico::Seconds CheckInterval{5};
     const auto now = Clock::now();
@@ -53,7 +52,7 @@ void pico::Engine::HandleSnap::Tick()
 
         auto& entry = m_handleEntryCache[i];
 
-        const auto pid = reinterpret_cast<pico::Uint32>(entry.UniqueProcessId);
+        const auto pid = (pico::Uint32)(entry.UniqueProcessId);
 
         if (pid == SystemIdleProcId || pid == SystemUniqueProcessId || pid == s_localPid)
         {
@@ -98,8 +97,7 @@ void pico::Engine::HandleSnap::OnProcessHandleCheck(const Windows::SYSTEM_HANDLE
 {
     constexpr auto CheckedMask = PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE;
 
-    static const auto s_localPid =
-        static_cast<pico::Uint32>(shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
+    static const auto s_localPid = shared::ProcessEnv::GetPID();
     static const auto s_currentProcess = GetCurrentProcess();
 
     if ((aEntry.GrantedAccess & CheckedMask) == 0u)
@@ -112,7 +110,7 @@ void pico::Engine::HandleSnap::OnProcessHandleCheck(const Windows::SYSTEM_HANDLE
 
     wil::unique_handle dupHandle{};
 
-    const auto pid = reinterpret_cast<pico::Uint32>(aEntry.UniqueProcessId);
+    const auto pid = (pico::Uint32)(aEntry.UniqueProcessId);
 
     if (!NT_SUCCESS(Windows::NtDuplicateObject(aOwner.get(), aEntry.HandleValue, s_currentProcess,
                                                *dupHandle.addressof(), PROCESS_QUERY_LIMITED_INFORMATION, 0u, 0u)))
@@ -139,8 +137,7 @@ void pico::Engine::HandleSnap::OnThreadHandleCheck(const Windows::SYSTEM_HANDLE_
 {
     constexpr auto CheckedMask = THREAD_TERMINATE | THREAD_SUSPEND_RESUME | THREAD_SET_CONTEXT | THREAD_GET_CONTEXT;
 
-    static const auto s_localPid =
-        static_cast<pico::Uint32>(shared::ProcessEnv::GetCurrentThreadEnvironment()->ClientId.UniqueProcess);
+    static const auto s_localPid = shared::ProcessEnv::GetPID();
     static const auto s_currentProcess = GetCurrentProcess();
 
     if ((aEntry.GrantedAccess & CheckedMask) == 0u)
@@ -152,7 +149,7 @@ void pico::Engine::HandleSnap::OnThreadHandleCheck(const Windows::SYSTEM_HANDLE_
 
     wil::unique_handle dupHandle{};
 
-    const auto pid = reinterpret_cast<pico::Uint32>(aEntry.UniqueProcessId);
+    const auto pid = (pico::Uint32)(aEntry.UniqueProcessId);
 
     if (!NT_SUCCESS(Windows::NtDuplicateObject(aOwner.get(), aEntry.HandleValue, s_currentProcess,
                                                *dupHandle.addressof(), THREAD_QUERY_LIMITED_INFORMATION, 0u, 0u)))

@@ -11,13 +11,13 @@ void pico::Engine::WindowSnap::Tick()
         EnumWindows(
             [](HWND aHwnd, LPARAM aThis) -> BOOL
             {
-                auto self = reinterpret_cast<WindowSnap*>(aThis);
+                auto self = (WindowSnap*)(aThis);
 
                 self->m_windowCache.push_back(aHwnd);
 
                 return TRUE;
             },
-            reinterpret_cast<LPARAM>(this));
+            (LPARAM)(this));
 
         logger->info("[WindowSnap] Window count: {}, taken: {}ms", m_windowCache.size(), windowGrab.Now());
 
@@ -34,7 +34,7 @@ void pico::Engine::WindowSnap::Tick()
     if (GetWindowInfo(window, &info))
     {
         pico::Uint32 pid{};
-        GetWindowThreadProcessId(window, reinterpret_cast<LPDWORD>(&pid));
+        GetWindowThreadProcessId(window, (LPDWORD)(&pid));
 
         pico::UnicodeString processImage{};
 
@@ -50,17 +50,17 @@ void pico::Engine::WindowSnap::Tick()
         pico::String windowTitle(WindowTextSize, {});
         pico::String windowClass(WindowTextSize, {});
 
-        if (GetWindowTextA(window, windowTitle.data(), static_cast<pico::Int32>(windowTitle.size())) == 0)
+        if (GetWindowTextA(window, windowTitle.data(), (pico::Int32)(windowTitle.size())) == 0)
         {
             windowTitle = "<none>";
         }
 
-        if (GetClassNameA(window, windowClass.data(), static_cast<pico::Int32>(windowClass.size())))
+        if (GetClassNameA(window, windowClass.data(), (pico::Int32)(windowClass.size())))
         {
             windowClass = "<none>";
         }
 
-        logger->info("[WindowSnap] Window {} (PID {}, image {})", reinterpret_cast<void*>(window), pid,
+        logger->info("[WindowSnap] Window {} (PID {}, image {})", (void*)(window), pid,
                      !processImage.empty() ? shared::Util::ToUTF8(processImage) : "<none>");
 
         logger->info("[WindowSnap] Title: {} ({:#x}), class: {} ({:#x})", pico::StringView(windowTitle.c_str()),
@@ -74,7 +74,7 @@ void pico::Engine::WindowSnap::Tick()
 
         if ((info.dwExStyle & (WS_EX_TRANSPARENT | WS_EX_TOPMOST)) == (WS_EX_TRANSPARENT | WS_EX_TOPMOST))
         {
-            logger->warn("[WindowSnap] Window {} has suspicious attributes!", reinterpret_cast<void*>(window));
+            logger->warn("[WindowSnap] Window {} has suspicious attributes!", (void*)(window));
         }
     }
 

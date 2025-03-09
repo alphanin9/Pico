@@ -200,7 +200,7 @@ public:
     template<class T>
     HookWrapper(const Callback& aCallback, T* aContext)
         : m_callback(aCallback)
-        , m_context(static_cast<Context*>(aContext))
+        , m_context((Context*)(aContext))
     {
     }
 
@@ -274,7 +274,7 @@ public:
         s_address = Raw::GetAddress();
 
         s_attached =
-            s_driver->Attach(s_address, reinterpret_cast<void*>(s_handler), reinterpret_cast<void**>(aOriginal));
+            s_driver->Attach(s_address, (void*)s_handler, (void**)aOriginal);
         s_original = *aOriginal;
 
         if (!s_attached)
@@ -287,7 +287,7 @@ public:
 
         if constexpr (CanOverrideAddress<TRaw>)
         {
-            TRaw::SetAddress(reinterpret_cast<uintptr_t>(s_original));
+            TRaw::SetAddress((uintptr_t)s_original);
         }
 
         return true;
