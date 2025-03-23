@@ -211,7 +211,14 @@ void pico::Engine::Engine::Setup()
         logger->error("[Preflight] Secure Boot is NOT enabled! This should not let the app launch.");
     }
 
-    // Note: add Measured Boot log dump here
+    logger->info("[Preflight] Dumping Measured Boot config...");
+
+    const auto measuredBootData = shared::EnvironmentIntegrity::GetLastMeasuredBootData();
+
+    Logger::Get().DumpDataToFile("MeasuredBootDataJSON", (void*)measuredBootData.m_json.data(),
+                                 measuredBootData.m_json.size());
+    Logger::Get().DumpDataToFile("MeasuredBootDataRaw", (void*)measuredBootData.m_rawBuffer.data(),
+                                 measuredBootData.m_rawBuffer.size());
 
     const auto codeIntegrityConfig = shared::EnvironmentIntegrity::GetCodeIntegrityConfig();
     logger->info("[Preflight] CI config: enabled: {}, debug mode: {}, test signing: {}, HVCI: {}",

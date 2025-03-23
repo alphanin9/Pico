@@ -29,25 +29,57 @@ void pico::Engine::Logger::DumpDataToFile(pico::StringView aFileNameTag, void* a
     const auto time = std::chrono::system_clock::now();
 
     // ./PicoLogs_{datetime}/{current_datetime}_{tag}_{uuid}.bin
-    auto path = std::format("./{}/{:%Y%m%d%H%M%S}_{}_{}.bin", m_dumpFolderName.c_str(), time, aFileNameTag, uuid);
-    auto base64Path =
-        std::format("./{}/{:%Y%m%d%H%M%S}_{}_{}_BASE64.txt", m_dumpFolderName.c_str(), time, aFileNameTag, uuid);
+    //
+    // A note: we should be using format_to here I think
+    // Ugly...
+    auto path = shared::Util::ToUTF16(
+        std::format("./{}/{:%Y%m%d%H%M%S}_{}_{}.bin", m_dumpFolderName.c_str(), time, aFileNameTag, uuid));
 
-    m_logger->info("[Logger] Dumping {} bytes of data to {}...", aDataSize, path);
+    auto [rawFile, rawFileError] = wil::try_create_new_file(path.c_str());
 
-    std::ofstream file{path, std::ios::binary};
-    std::ofstream base64File{base64Path, std::ios::binary};
+    if (!rawFile)
+    {
+        m_logger->error("Failed to open raw file for {} for write! Error {}", aFileNameTag, rawFileError);
+        return;
+    }
+
+    pico::Uint32 numberOfBytesWrittenRaw{};
+
+    if (!WriteFile(rawFile.get(), aDataStart, (pico::Uint32)(aDataSize), (LPDWORD)(&numberOfBytesWrittenRaw),
+                   nullptr) ||
+        numberOfBytesWrittenRaw != (pico::Uint32)(aDataSize))
+    {
+        m_logger->error("Failed to write bytes to raw file for {}! Error {}", aFileNameTag, GetLastError());
+        return;
+    }
+
+    m_logger->info("[Logger] Wrote {} bytes for raw {}", numberOfBytesWrittenRaw, aFileNameTag);
+
+    auto base64Path = shared::Util::ToUTF16(
+        std::format("./{}/{:%Y%m%d%H%M%S}_{}_{}_BASE64.txt", m_dumpFolderName.c_str(), time, aFileNameTag, uuid));
+
+    auto [base64File, base64FileError] = wil::try_create_new_file(base64Path.c_str());
+
+    if (!base64File)
+    {
+        m_logger->error("Failed to open Base64 file for {} for write! Error {}", aFileNameTag, base64FileError);
+        return;
+    }
 
     pico::String base64{};
+    bn::encode_b64((pico::Uint8*)(aDataStart), (pico::Uint8*)(aDataStart) + aDataSize, std::back_inserter(base64));
 
-    bn::encode_b64((pico::Uint8*)(aDataStart), (pico::Uint8*)(aDataStart) + aDataSize,
-                   std::back_inserter(base64));
+    pico::Uint32 numberOfBytesWrittenB64{};
 
-    file.write((const char*)(aDataStart), aDataSize);
-    base64File.write(base64.data(), base64.size());
+    if (!WriteFile(base64File.get(), base64.data(), (pico::Uint32)(base64.size()), (LPDWORD)(&numberOfBytesWrittenB64),
+                   nullptr) ||
+        numberOfBytesWrittenB64 != (pico::Uint32)(base64.size()))
+    {
+        m_logger->error("Failed to write bytes to Base64 file for {}! Error {}", aFileNameTag, GetLastError());
+        return;
+    }
 
-    m_logger->info("[Logger] Wrote {} bytes to file {}", (pico::Int64)(file.tellp()), path);
-    m_logger->info("[Logger] Wrote {} bytes to Base64 file {}", (pico::Int64)(base64File.tellp()), path);
+    m_logger->info("[Logger] Wrote {} bytes for Base64 {}", numberOfBytesWrittenB64, aFileNameTag);
 }
 
 void pico::Engine::Logger::Tick()
