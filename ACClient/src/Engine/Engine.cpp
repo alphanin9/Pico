@@ -215,9 +215,9 @@ void pico::Engine::Engine::Setup()
 
     const auto measuredBootData = shared::EnvironmentIntegrity::GetLastMeasuredBootData();
 
-    Logger::Get().DumpDataToFile("MeasuredBootDataJSON", (void*)measuredBootData.m_json.data(),
+    Logger::Get().DumpDataToFile(L"MeasuredBootDataJSON", (void*)(measuredBootData.m_json.data()),
                                  measuredBootData.m_json.size());
-    Logger::Get().DumpDataToFile("MeasuredBootDataRaw", (void*)measuredBootData.m_rawBuffer.data(),
+    Logger::Get().DumpDataToFile(L"MeasuredBootDataRaw", (void*)(measuredBootData.m_rawBuffer.data()),
                                  measuredBootData.m_rawBuffer.size());
 
     const auto codeIntegrityConfig = shared::EnvironmentIntegrity::GetCodeIntegrityConfig();

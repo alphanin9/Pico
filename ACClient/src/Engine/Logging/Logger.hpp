@@ -21,6 +21,9 @@ struct Logger : public shared::Util::NonCopyableOrMovable
     // Name of the folder we will output the logs/dumped data to.
     pico::String m_dumpFolderName{};
 
+    // An UTF-16 version of the dump folder name. Used for easier file dumping.
+    pico::UnicodeString m_wideDumpFolderName{};
+
     Logger();
 
     /**
@@ -30,7 +33,7 @@ struct Logger : public shared::Util::NonCopyableOrMovable
      * \param aDataStart Pointer to the start of the data you want to dump.
      * \param aDataSize Size of the data pointed to by aDataStart.
      */
-    void DumpDataToFile(pico::StringView aFileNameTag, void* aDataStart, pico::Size aDataSize);
+    void DumpDataToFile(pico::UnicodeStringView aFileNameTag, void* aDataStart, pico::Size aDataSize);
 
     /**
      * \brief Ticked in thread pool worker. Flushes the logs.

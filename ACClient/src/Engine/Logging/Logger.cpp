@@ -4,8 +4,12 @@
 #include <uuid.h>
 
 pico::Engine::Logger::Logger()
-    : m_dumpFolderName(std::format("PicoLogs_{:%Y%m%d%H%M%S}", std::chrono::system_clock::now()).c_str())
+    : m_dumpFolderName()
 {
+    std::format_to(std::back_inserter(m_dumpFolderName), "PicoLogs_{:%Y-%m-%d-%H-%M-%S}", std::chrono::system_clock::now());
+
+    m_wideDumpFolderName = shared::Util::ToUTF16(m_dumpFolderName);
+
     spdlog::set_level(spdlog::level::trace);
 
     m_debugStringSink = std::make_shared<spdlog::sinks::msvc_sink_mt>(true);
@@ -23,23 +27,28 @@ pico::Engine::Logger::Logger()
     m_logger->flush_on(spdlog::level::err);
 }
 
-void pico::Engine::Logger::DumpDataToFile(pico::StringView aFileNameTag, void* aDataStart, pico::Size aDataSize)
+void pico::Engine::Logger::DumpDataToFile(pico::UnicodeStringView aFileNameTag, void* aDataStart, pico::Size aDataSize)
 {
-    const auto uuid = uuids::to_string(uuids::uuid_system_generator{}());
-    const auto time = std::chrono::system_clock::now();
+    const auto time = Clock::now().time_since_epoch().count();
+    const auto tagAsNarrow = shared::Util::ToUTF8(aFileNameTag);
 
     // ./PicoLogs_{datetime}/{current_datetime}_{tag}_{uuid}.bin
     //
     // A note: we should be using format_to here I think
     // Ugly...
-    auto path = shared::Util::ToUTF16(
-        std::format("./{}/{:%Y%m%d%H%M%S}_{}_{}.bin", m_dumpFolderName.c_str(), time, aFileNameTag, uuid));
+
+    pico::UnicodeString path{};
+    std::format_to(std::back_inserter(path), L"./{}/{:#016x}_{}.bin", m_wideDumpFolderName.c_str(), time,
+                   aFileNameTag);
+
+    //auto path = shared::Util::ToUTF16(
+    //    std::format("./{}/{:%Y%m%d%H%M%S}_{}_{}.bin", m_dumpFolderName.c_str(), time, aFileNameTag, uuid));
 
     auto [rawFile, rawFileError] = wil::try_create_new_file(path.c_str());
 
     if (!rawFile)
     {
-        m_logger->error("Failed to open raw file for {} for write! Error {}", aFileNameTag, rawFileError);
+        m_logger->error("Failed to open raw file for {} for write! Error {}", tagAsNarrow, rawFileError);
         return;
     }
 
@@ -49,20 +58,23 @@ void pico::Engine::Logger::DumpDataToFile(pico::StringView aFileNameTag, void* a
                    nullptr) ||
         numberOfBytesWrittenRaw != (pico::Uint32)(aDataSize))
     {
-        m_logger->error("Failed to write bytes to raw file for {}! Error {}", aFileNameTag, GetLastError());
+        m_logger->error("Failed to write bytes to raw file for {}! Error {}", tagAsNarrow,
+                        GetLastError());
         return;
     }
 
-    m_logger->info("[Logger] Wrote {} bytes for raw {}", numberOfBytesWrittenRaw, aFileNameTag);
+    m_logger->info("[Logger] Wrote {} bytes for raw {}", numberOfBytesWrittenRaw, tagAsNarrow);
 
-    auto base64Path = shared::Util::ToUTF16(
-        std::format("./{}/{:%Y%m%d%H%M%S}_{}_{}_BASE64.txt", m_dumpFolderName.c_str(), time, aFileNameTag, uuid));
+    pico::UnicodeString base64Path{};
+    std::format_to(std::back_inserter(base64Path), L"./{}/{:#016x}_{}_B64.txt", m_wideDumpFolderName.c_str(), time,
+                   aFileNameTag);
 
     auto [base64File, base64FileError] = wil::try_create_new_file(base64Path.c_str());
 
     if (!base64File)
     {
-        m_logger->error("Failed to open Base64 file for {} for write! Error {}", aFileNameTag, base64FileError);
+        m_logger->error("Failed to open Base64 file for {} for write! Error {}", tagAsNarrow,
+                        base64FileError);
         return;
     }
 
@@ -75,11 +87,12 @@ void pico::Engine::Logger::DumpDataToFile(pico::StringView aFileNameTag, void* a
                    nullptr) ||
         numberOfBytesWrittenB64 != (pico::Uint32)(base64.size()))
     {
-        m_logger->error("Failed to write bytes to Base64 file for {}! Error {}", aFileNameTag, GetLastError());
+        m_logger->error("Failed to write bytes to Base64 file for {}! Error {}", tagAsNarrow,
+                        GetLastError());
         return;
     }
 
-    m_logger->info("[Logger] Wrote {} bytes for Base64 {}", numberOfBytesWrittenB64, aFileNameTag);
+    m_logger->info("[Logger] Wrote {} bytes for Base64 {}", numberOfBytesWrittenB64, tagAsNarrow);
 }
 
 void pico::Engine::Logger::Tick()

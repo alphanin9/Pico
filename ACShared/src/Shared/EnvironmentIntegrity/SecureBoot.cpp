@@ -67,10 +67,11 @@ pico::shared::EnvironmentIntegrity::MeasuredBootData pico::shared::EnvironmentIn
 
     MeasuredBootData data{};
 
-    data.m_rawBuffer = shared::Files::ReadEntireFileToBuffer(latestRawBootLogFileName.data());
+    data.m_rawBuffer = shared::Files::ReadEntireFileToBuffer(pico::UnicodeStringView{&latestRawBootLogFileName[0]});
 
     // Not too efficient...
-    const auto tempVector = shared::Files::ReadEntireFileToBuffer(latestJSONBootLogFileName.data());
+    const auto tempVector =
+        shared::Files::ReadEntireFileToBuffer(pico::UnicodeStringView{&latestJSONBootLogFileName[0]});
     
     data.m_json = pico::String(tempVector.begin(), tempVector.end());
 
