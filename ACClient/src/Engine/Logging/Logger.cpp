@@ -38,7 +38,7 @@ void pico::Engine::Logger::DumpDataToFile(pico::UnicodeStringView aFileNameTag, 
     // Ugly...
 
     pico::UnicodeString path{};
-    std::format_to(std::back_inserter(path), L"./{}/{:#016x}_{}.bin", m_wideDumpFolderName.c_str(), time,
+    std::format_to(std::back_inserter(path), L"./{}/{:016x}_{}.bin", m_wideDumpFolderName.c_str(), time,
                    aFileNameTag);
 
     //auto path = shared::Util::ToUTF16(
@@ -66,7 +66,7 @@ void pico::Engine::Logger::DumpDataToFile(pico::UnicodeStringView aFileNameTag, 
     m_logger->info("[Logger] Wrote {} bytes for raw {}", numberOfBytesWrittenRaw, tagAsNarrow);
 
     pico::UnicodeString base64Path{};
-    std::format_to(std::back_inserter(base64Path), L"./{}/{:#016x}_{}_B64.txt", m_wideDumpFolderName.c_str(), time,
+    std::format_to(std::back_inserter(base64Path), L"./{}/{:016x}_{}_B64.txt", m_wideDumpFolderName.c_str(), time,
                    aFileNameTag);
 
     auto [base64File, base64FileError] = wil::try_create_new_file(base64Path.c_str());
