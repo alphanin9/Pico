@@ -17,8 +17,10 @@ pico::shared::EnvironmentIntegrity::MeasuredBootData pico::shared::EnvironmentIn
     // Does the kernel store results somewhere as well?
     // Should we be storing the whole folder's data?
 
-    pico::UnicodeString searchQuery{};
-    wil::GetWindowsDirectoryW(searchQuery);
+    pico::UnicodeString winDir{};
+    wil::GetWindowsDirectoryW(winDir);
+
+    auto searchQuery = winDir;
 
     // Hack!
     searchQuery += L"\\Logs\\MeasuredBoot\\*";
@@ -65,13 +67,15 @@ pico::shared::EnvironmentIntegrity::MeasuredBootData pico::shared::EnvironmentIn
         return {};
     }
 
+    const auto fullRawPath = winDir + L"\\Logs\\MeasuredBoot\\" + &latestRawBootLogFileName[0];
+    const auto fullJsonPath = winDir + L"\\Logs\\MeasuredBoot\\" + &latestJSONBootLogFileName[0];
+
     MeasuredBootData data{};
 
-    data.m_rawBuffer = shared::Files::ReadEntireFileToBuffer(pico::UnicodeStringView{&latestRawBootLogFileName[0]});
+    data.m_rawBuffer = shared::Files::ReadEntireFileToBuffer(fullRawPath);
 
     // Not too efficient...
-    const auto tempVector =
-        shared::Files::ReadEntireFileToBuffer(pico::UnicodeStringView{&latestJSONBootLogFileName[0]});
+    const auto tempVector = shared::Files::ReadEntireFileToBuffer(fullJsonPath);
     
     data.m_json = pico::String(tempVector.begin(), tempVector.end());
 

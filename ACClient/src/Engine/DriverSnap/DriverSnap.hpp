@@ -23,7 +23,7 @@ struct DriverSnap : shared::Util::NonCopyableOrMovable
         NoSHA256 = 2, // Failed to get SHA256, odd...
         VulnerableByHash = 3,   // Driver is in precompiled vulnerable driver list
         CertificateRevoked = 4, // Driver certificate has been revoked and the driver is not considered trustworthy
-        KnownBad = 5            // We've already checked this one's file, no need to run WinVerifyTrust again
+        KnownBad = 5            // We've already checked this one's file, no need to run WinVerifyTrust againv
     };
 
     // Already signature verified drivers
