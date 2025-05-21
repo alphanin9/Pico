@@ -1,6 +1,5 @@
 add_requires("asmjit", "base-n", "frozen", "lazy_importer", "spdlog", "stduuid", "thread-pool")
 
-
 target("ACClient")
     set_kind("shared")
     set_warnings("all")
