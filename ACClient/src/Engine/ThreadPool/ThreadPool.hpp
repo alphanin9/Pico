@@ -20,8 +20,8 @@ struct ThreadPool : public shared::Util::NonCopyableOrMovable
     // This is a fairly arbitrary value, but I believe that 8 threads should be okay enough
     inline static constexpr auto MaxThreadCount = 8u;
 
-    BS::thread_pool m_pool{};                 // Internal thread pool
-    pico::Vector<pico::Uint32> m_threadIds{}; // IDs of threads in pool
+    BS::thread_pool<BS::tp::priority> m_pool{}; // Internal thread pool
+    pico::Vector<pico::Uint32> m_threadIds{};   // IDs of threads in pool
     // NOTE: In a production environment, it would be advised to check
     // the integrity of m_threadIds array
 
