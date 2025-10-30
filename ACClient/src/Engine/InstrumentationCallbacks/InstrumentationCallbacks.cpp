@@ -32,6 +32,8 @@ pico::Engine::InstrumentationCallbacks* m_globalPtr{};
 
 void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asmjit::x86::Assembler& aAssembler)
 {
+    using namespace asmjit::x86;
+
     // While we could just import them, I'm not sure it'd work properly
     // This does
     void* RtlCaptureContext = LI_FN(RtlCaptureContext).nt_cached();
@@ -40,9 +42,9 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
     void* KiUserExceptionDispatcher = LI_FN(KiUserExceptionDispatcher).nt_cached();
     void* KiUserApcDispatcher = LI_FN(KiUserApcDispatcher).nt_cached();
 
-    constexpr auto ContextRip = asmjit::x86::qword_ptr(asmjit::x86::rcx, offsetof(Windows::CONTEXT, Rip));
-    constexpr auto ContextRcx = asmjit::x86::qword_ptr(asmjit::x86::rcx, offsetof(Windows::CONTEXT, Rcx));
-    constexpr auto ContextRsp = asmjit::x86::qword_ptr(asmjit::x86::rcx, offsetof(Windows::CONTEXT, Rsp));
+    constexpr auto ContextRip = qword_ptr(rcx, offsetof(Windows::CONTEXT, Rip));
+    constexpr auto ContextRcx = qword_ptr(rcx, offsetof(Windows::CONTEXT, Rcx));
+    constexpr auto ContextRsp = qword_ptr(rcx, offsetof(Windows::CONTEXT, Rsp));
 
     // Note: we only make any special logic for the important ones
     // Because they're, well, *important*
@@ -53,56 +55,52 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
 
     // Source RIP is in R10
     // Backup stack pointer and RIP
-    auto GsPc = asmjit::x86::qword_ptr_abs(offsetof(Windows::TEB, InstrumentationCallbackPreviousPc));
-    GsPc.setSegment(asmjit::x86::gs);
+    auto GsPc = qword_ptr_abs(offsetof(Windows::TEB, InstrumentationCallbackPreviousPc));
+    GsPc.setSegment(gs);
 
-    auto GsSp = asmjit::x86::qword_ptr_abs(offsetof(Windows::TEB, InstrumentationCallbackPreviousSp));
-    GsSp.setSegment(asmjit::x86::gs);
+    auto GsSp = qword_ptr_abs(offsetof(Windows::TEB, InstrumentationCallbackPreviousSp));
+    GsSp.setSegment(gs);
 
-    aAssembler.mov(GsPc, asmjit::x86::r10);
-    aAssembler.mov(GsSp, asmjit::x86::rsp);
+    aAssembler.mov(GsPc, r10);
+    aAssembler.mov(GsSp, rsp);
 
     // Make stack space for the context we'll restore to after our handler, align stack, capture ctx
-    aAssembler.sub(asmjit::x86::rsp, sizeof(Windows::CONTEXT));
-    aAssembler.and_(asmjit::x86::rsp, -16ull);
+    aAssembler.sub(rsp, sizeof(Windows::CONTEXT));
+    aAssembler.and_(rsp, -16ull);
     // Back the original RCX up, set up RCX for call
-    aAssembler.mov(asmjit::x86::r11, asmjit::x86::rcx);
-    aAssembler.mov(asmjit::x86::rcx, asmjit::x86::rsp);
+    aAssembler.mov(r11, rcx);
+    aAssembler.mov(rcx, rsp);
 
     // Imports mess with us, so we hit back with baffling memes
     // We're also using actual exports from NTDLL instead of imports now
-    aAssembler.mov(asmjit::x86::r10, (pico::Uint64)(RtlCaptureContext));
-    aAssembler.call(asmjit::x86::r10);
+    aAssembler.mov(r10, (pico::Uint64)(RtlCaptureContext));
+    aAssembler.call(r10);
 
     // After this we can do whatever we want to regs
     // Backup context to be available in R15 if we want to use it
-    aAssembler.mov(asmjit::x86::r15, asmjit::x86::rcx);
-    aAssembler.mov(asmjit::x86::r10, GsPc);
+    aAssembler.mov(r15, rcx);
+    aAssembler.mov(r10, GsPc);
 
-    aAssembler.mov(ContextRip, asmjit::x86::r10);
-    aAssembler.mov(ContextRcx, asmjit::x86::r11);
+    aAssembler.mov(ContextRip, r10);
+    aAssembler.mov(ContextRcx, r11);
 
     // R11 is useless now, scratch it
 
-    aAssembler.mov(asmjit::x86::r11, GsSp);
-    aAssembler.mov(ContextRsp, asmjit::x86::r11);
+    aAssembler.mov(r11, GsSp);
+    aAssembler.mov(ContextRsp, r11);
 
     // Now that we have a backup context, we can start doing actual IC logic
     // Note: to avoid errors, we need to move to temp reg first
-    aAssembler.mov(asmjit::x86::r11, (pico::Uint64)(LdrInitializeThunk));
-    aAssembler.cmp(asmjit::x86::r10, asmjit::x86::r11);
+    aAssembler.cmp(r10, qword_ptr((pico::Uint64)(&LdrInitializeThunk)));
     aAssembler.jz(labelLdr);
-    aAssembler.mov(asmjit::x86::r11, (pico::Uint64)(KiUserExceptionDispatcher));
-    aAssembler.cmp(asmjit::x86::r10, asmjit::x86::r11);
+    aAssembler.cmp(r10, qword_ptr((pico::Uint64)(&KiUserExceptionDispatcher)));
     aAssembler.jz(labelException);
-    aAssembler.mov(asmjit::x86::r11, (pico::Uint64)(KiUserApcDispatcher));
-    aAssembler.cmp(asmjit::x86::r10, asmjit::x86::r11);
+    aAssembler.cmp(r10, qword_ptr((pico::Uint64)(&KiUserApcDispatcher)));
     aAssembler.jz(labelApc);
 
     // Start generic call
-    aAssembler.mov(asmjit::x86::r10, (pico::Uint64)(&OnUnknownInstrumentationCallback));
-    aAssembler.sub(asmjit::x86::rsp, 32u); 
-    aAssembler.call(asmjit::x86::r10);
+    aAssembler.sub(rsp, 0x28u); 
+    aAssembler.call((pico::Uint64)(&OnUnknownInstrumentationCallback));
     aAssembler.jmp(labelExit);
     // End generic call
 
@@ -110,24 +108,21 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
     aAssembler.bind(labelLdr);
 
     // Get CONTEXT::Rcx twice
-    aAssembler.mov(asmjit::x86::rcx, ContextRcx);
-    aAssembler.mov(asmjit::x86::rcx, ContextRcx);
-    aAssembler.mov(asmjit::x86::r10, (pico::Uint64)(&OnLdrInitializeThunk));
-    aAssembler.sub(asmjit::x86::rsp, 32u);
-    aAssembler.call(asmjit::x86::r10);
+    aAssembler.mov(rcx, ContextRcx);
+    aAssembler.mov(rcx, ContextRcx);
+    aAssembler.sub(rsp, 0x28u);
+    aAssembler.call((pico::Uint64)(&OnLdrInitializeThunk));
     aAssembler.jmp(labelExit);
     // End OnLdrInitializeThunk
 
     // Start OnKiUserExceptionDispatcher
     aAssembler.bind(labelException);
-    aAssembler.mov(asmjit::x86::rcx, ContextRsp);
-    aAssembler.mov(asmjit::x86::rdx, asmjit::x86::rcx);
+    aAssembler.mov(rcx, ContextRsp);
+    aAssembler.mov(rdx, asmjit::x86::rcx);
     // IDK what the additional 32 bytes are
-    aAssembler.add(asmjit::x86::rcx, sizeof(Windows::CONTEXT) + 32u);
-
-    aAssembler.mov(asmjit::x86::r10, (pico::Uint64)(&OnKiUserExceptionDispatcher));
-    aAssembler.sub(asmjit::x86::rsp, 32u);
-    aAssembler.call(asmjit::x86::r10);
+    aAssembler.add(rcx, sizeof(Windows::CONTEXT) + 32u);
+    aAssembler.sub(rsp, 0x28u);
+    aAssembler.call((pico::Uint64)(&OnKiUserExceptionDispatcher));
     aAssembler.jmp(labelExit);
     // End OnKiUserExceptionDispatcher
 
@@ -138,12 +133,11 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
     // RSP + 0x10 = Could be APC param
     // RSP + 0x8 = _APC_CALLBACK_DATA when using QUEUE_USER_APC_CALLBACK_DATA_CONTEXT, at least
     aAssembler.bind(labelApc);
-    aAssembler.mov(asmjit::x86::r11, ContextRsp);
-    aAssembler.mov(asmjit::x86::rcx, asmjit::x86::qword_ptr(asmjit::x86::r11, 0u));
-    aAssembler.mov(asmjit::x86::rdx, asmjit::x86::qword_ptr(asmjit::x86::r11, 8u));
-    aAssembler.mov(asmjit::x86::r10, (pico::Uint64)(&OnKiUserApcDispatcher));
-    aAssembler.sub(asmjit::x86::rsp, 32u);
-    aAssembler.call(asmjit::x86::r10);
+    aAssembler.mov(r11, ContextRsp);
+    aAssembler.mov(rcx, qword_ptr(r11));
+    aAssembler.mov(rdx, qword_ptr(r11, 8u));
+    aAssembler.sub(rsp, 0x28u);
+    aAssembler.call((pico::Uint64)(&OnKiUserApcDispatcher));
     aAssembler.jmp(labelExit);
     // End OnKiUserApcDispatcher
 
@@ -154,11 +148,10 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
     aAssembler.mov(GsPc, 0ull);
     aAssembler.mov(GsSp, 0ull);
 
-    aAssembler.mov(asmjit::x86::rcx, asmjit::x86::r15);
-    aAssembler.mov(asmjit::x86::rdx, 0u);
-    aAssembler.sub(asmjit::x86::rsp, 32u);
-    aAssembler.mov(asmjit::x86::r10, (pico::Uint64)(RtlRestoreContext));
-    aAssembler.call(asmjit::x86::r10);
+    aAssembler.mov(rcx, r15);
+    aAssembler.mov(rdx, 0u);
+    aAssembler.sub(rsp, 0x28u);
+    aAssembler.call((pico::Uint64)(RtlRestoreContext));
 
     // WTF?
     aAssembler.int3();
