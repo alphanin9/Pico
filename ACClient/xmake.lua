@@ -1,4 +1,4 @@
-add_requires("asmjit", "base-n", "frozen", "lazy_importer", "spdlog", "stduuid", "thread-pool")
+add_requires("asmjit", "base-n", "frozen", "lazy_importer", "safetyhook", "spdlog", "stduuid", "thread-pool")
 
 target("ACClient")
     set_kind("shared")
@@ -7,7 +7,7 @@ target("ACClient")
     add_files("src/**.cpp")
     add_headerfiles("src/**.hpp")
     add_includedirs("src/")
-    add_deps("ACShared", "LinuxPE", "safetyhook")
+    add_deps("ACShared", "LinuxPE")
     add_defines(
         "BS_THREAD_POOL_ENABLE_NATIVE_HANDLES", 
         "BS_THREAD_POOL_ENABLE_PRIORITY", 
@@ -21,6 +21,7 @@ target("ACClient")
         "frozen",
         "hopscotch-map",
         "lazy_importer",
+        "safetyhook",
         "spdlog",
         "stduuid",
         "thread-pool",
