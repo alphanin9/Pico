@@ -16,6 +16,9 @@ namespace pico::Engine
  *
  * In theory, this can be improved by the kernel driver checking the EPROCESS structure of our process and validating
  * the callback pointer.
+ * 
+ * NOTE: currently instrumentation callback is JIT-generated. 
+ * This isn't optimal, but it's a XMake Moment:tm: where it doesn't add .asm files to the VS2022 Solution Explorer.
  */
 struct InstrumentationCallbacks : public shared::Util::NonCopyableOrMovable
 {

@@ -19,8 +19,7 @@ public:
     void handleError(asmjit::Error aErr, const char* aMessage, asmjit::BaseEmitter* aOrigin) override
     {
         pico::Engine::Logger::GetLogSink()->error("[Asmjit] Error {} ({})! Message {} from emitter {}", aErr,
-                                                  asmjit::DebugUtils::errorAsString(aErr), aMessage,
-                                                  (void*)(aOrigin));
+                                                  asmjit::DebugUtils::errorAsString(aErr), aMessage, (void*)(aOrigin));
     }
 };
 
@@ -42,16 +41,43 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
     void* KiUserExceptionDispatcher = LI_FN(KiUserExceptionDispatcher).nt_cached();
     void* KiUserApcDispatcher = LI_FN(KiUserApcDispatcher).nt_cached();
 
+    // Small wrapper...
+    const auto EmbedQword = [&aAssembler](void* aFunctionPointer) -> asmjit::Label
+    {
+        const auto label = aAssembler.newLabel();
+        aAssembler.bind(label);
+        aAssembler.dq((pico::Uint64)(aFunctionPointer));
+
+        return label;
+    };
+
     constexpr auto ContextRip = qword_ptr(rcx, offsetof(Windows::CONTEXT, Rip));
     constexpr auto ContextRcx = qword_ptr(rcx, offsetof(Windows::CONTEXT, Rcx));
     constexpr auto ContextRsp = qword_ptr(rcx, offsetof(Windows::CONTEXT, Rsp));
 
-    // Note: we only make any special logic for the important ones
-    // Because they're, well, *important*
-    const auto labelLdr = aAssembler.newNamedLabel("OnLdrInitializeThunk");
-    const auto labelException = aAssembler.newNamedLabel("OnKiUserExceptionDispatcher");
-    const auto labelApc = aAssembler.newNamedLabel("OnKiUserApcDispatcher");
-    const auto labelExit = aAssembler.newNamedLabel("OnExitCallback");
+    // Technically some other endpoints exist - we don't really care
+    const auto labelLdr = aAssembler.newLabel();
+    const auto labelException = aAssembler.newLabel();
+    const auto labelApc = aAssembler.newLabel();
+    const auto labelExit = aAssembler.newLabel();
+
+    const auto stubCodeStart = aAssembler.newLabel();
+
+    aAssembler.jmp(stubCodeStart);
+
+    const auto EmbeddedRtlCaptureContext = EmbedQword(RtlCaptureContext);
+    const auto EmbeddedRtlRestoreContext = EmbedQword(RtlRestoreContext);
+    const auto EmbeddedLdrInitializeThunk = EmbedQword(LdrInitializeThunk);
+    const auto EmbeddedKiUserExceptionDispatcher = EmbedQword(KiUserExceptionDispatcher);
+    const auto EmbeddedKiUserApcDispatcher = EmbedQword(KiUserApcDispatcher);
+
+    const auto EmbeddedHandlerUnknown = EmbedQword(OnUnknownInstrumentationCallback);
+    const auto EmbeddedHandlerLdr = EmbedQword(OnLdrInitializeThunk);
+    const auto EmbeddedHandlerException = EmbedQword(OnKiUserExceptionDispatcher);
+    const auto EmbeddedHandlerApc = EmbedQword(OnKiUserApcDispatcher);
+
+    aAssembler.bind(stubCodeStart);
+    // Begin with jmp to actual code, follow with necessary embedded data (called imports, whonot)
 
     // Source RIP is in R10
     // Backup stack pointer and RIP
@@ -71,10 +97,7 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
     aAssembler.mov(r11, rcx);
     aAssembler.mov(rcx, rsp);
 
-    // Imports mess with us, so we hit back with baffling memes
-    // We're also using actual exports from NTDLL instead of imports now
-    aAssembler.mov(r10, (pico::Uint64)(RtlCaptureContext));
-    aAssembler.call(r10);
+    aAssembler.call(qword_ptr(EmbeddedRtlCaptureContext));
 
     // After this we can do whatever we want to regs
     // Backup context to be available in R15 if we want to use it
@@ -91,16 +114,16 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
 
     // Now that we have a backup context, we can start doing actual IC logic
     // Note: to avoid errors, we need to move to temp reg first
-    aAssembler.cmp(r10, qword_ptr((pico::Uint64)(&LdrInitializeThunk)));
+    aAssembler.cmp(r10, qword_ptr(EmbeddedLdrInitializeThunk));
     aAssembler.jz(labelLdr);
-    aAssembler.cmp(r10, qword_ptr((pico::Uint64)(&KiUserExceptionDispatcher)));
+    aAssembler.cmp(r10, qword_ptr(EmbeddedKiUserExceptionDispatcher));
     aAssembler.jz(labelException);
-    aAssembler.cmp(r10, qword_ptr((pico::Uint64)(&KiUserApcDispatcher)));
+    aAssembler.cmp(r10, qword_ptr(EmbeddedKiUserApcDispatcher));
     aAssembler.jz(labelApc);
 
     // Start generic call
-    aAssembler.sub(rsp, 0x28u); 
-    aAssembler.call((pico::Uint64)(&OnUnknownInstrumentationCallback));
+    aAssembler.sub(rsp, 0x28u);
+    aAssembler.call(qword_ptr(EmbeddedHandlerUnknown));
     aAssembler.jmp(labelExit);
     // End generic call
 
@@ -111,7 +134,7 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
     aAssembler.mov(rcx, ContextRcx);
     aAssembler.mov(rcx, ContextRcx);
     aAssembler.sub(rsp, 0x28u);
-    aAssembler.call((pico::Uint64)(&OnLdrInitializeThunk));
+    aAssembler.call(qword_ptr(EmbeddedHandlerLdr));
     aAssembler.jmp(labelExit);
     // End OnLdrInitializeThunk
 
@@ -122,7 +145,7 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
     // IDK what the additional 32 bytes are
     aAssembler.add(rcx, sizeof(Windows::CONTEXT) + 32u);
     aAssembler.sub(rsp, 0x28u);
-    aAssembler.call((pico::Uint64)(&OnKiUserExceptionDispatcher));
+    aAssembler.call(qword_ptr(EmbeddedHandlerException));
     aAssembler.jmp(labelExit);
     // End OnKiUserExceptionDispatcher
 
@@ -137,7 +160,7 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
     aAssembler.mov(rcx, qword_ptr(r11));
     aAssembler.mov(rdx, qword_ptr(r11, 8u));
     aAssembler.sub(rsp, 0x28u);
-    aAssembler.call((pico::Uint64)(&OnKiUserApcDispatcher));
+    aAssembler.call(qword_ptr(EmbeddedHandlerApc));
     aAssembler.jmp(labelExit);
     // End OnKiUserApcDispatcher
 
@@ -151,7 +174,7 @@ void pico::Engine::InstrumentationCallbacks::AssembleInstrumentationCallback(asm
     aAssembler.mov(rcx, r15);
     aAssembler.mov(rdx, 0u);
     aAssembler.sub(rsp, 0x28u);
-    aAssembler.call((pico::Uint64)(RtlRestoreContext));
+    aAssembler.call(qword_ptr(EmbeddedRtlRestoreContext));
 
     // WTF?
     aAssembler.int3();
