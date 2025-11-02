@@ -99,23 +99,13 @@ pico::Vector<pico::Uint8> pico::shared::Files::ReadEntireFileToBuffer(pico::Unic
         return {};
     }
 
-    wil::unique_handle fileMapping{CreateFileMappingW(fileHandle.get(), nullptr, PAGE_READONLY, 0u, 0u, nullptr)};
-
-    if (!fileMapping)
-    {
-        return {};
-    }
-
-    wil::unique_mapview_ptr<void> mapView{MapViewOfFile(fileMapping.get(), FILE_MAP_READ, 0u, 0u, 0u)};
-
-    if (!mapView)
-    {
-        return {};
-    }
-
     pico::Vector<pico::Uint8> buf(fileSize.QuadPart, 0u);
 
-    std::copy_n((pico::Uint8*)mapView.get(), fileSize.QuadPart, buf.data());
+    // BUG: this won't read files more than 4GB, fix that when it pops up
+    if (ReadFile(fileHandle.get(), buf.data(), fileSize.LowPart, nullptr, nullptr))
+    {
+        return buf;
+    }
 
-    return buf;
+    return {};
 }
