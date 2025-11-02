@@ -7,7 +7,7 @@ pico::String pico::shared::Util::ToUTF8(pico::UnicodeStringView aView)
 
     pico::String output(pico::Size(bufferSize), '\0');
 
-    WideCharToMultiByte(CP_UTF8, 0u, aView.data(), (pico::Int32)(aView.size()), output.data(), output.size(),
+    WideCharToMultiByte(CP_UTF8, 0u, aView.data(), (pico::Int32)(aView.size()), output.data(), (pico::Int32)(output.size()),
                         nullptr, nullptr);
 
     return output;
@@ -21,7 +21,7 @@ pico::UnicodeString pico::shared::Util::ToUTF16(pico::StringView aView)
     pico::UnicodeString output(pico::Size(bufferSize), L'\0');
 
     MultiByteToWideChar(CP_UTF8, 0u, aView.data(), (pico::Int32)(aView.size()), output.data(),
-                        output.size());
+                        (pico::Int32)(output.size()));
 
     return output;
 }
